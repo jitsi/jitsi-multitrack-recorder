@@ -86,22 +86,28 @@ fun Application.module() {
 
 fun main(args: Array<String>) {
     logger.info("Running main, port=${Config.port}, recordingDirectory=${Config.recordingDirectory}")
+    logger.info("Recording format: ${Config.recordingFormat}")
     metrics.sessionsStarted.inc()
     embeddedServer(Netty, port = Config.port, host = "0.0.0.0", module = Application::module)
         .start(wait = true)
 }
 
 class RecordingSession(val meetingId: String) {
-    val mediaJsonRecorder = MediaJsonRecorder(selectDirectory(meetingId))
+    private val mediaJsonRecorder = if (Config.recordingFormat == RecordingFormat.MKA) {
+        MediaJsonMkaRecorder(selectDirectory(meetingId))
+    } else {
+        MediaJsonJsonRecorder(selectDirectory(meetingId))
+    }
+
     fun processText(text: String) {
         try {
-            mediaJsonRecorder.queue.add(Event.parse(text))
+            mediaJsonRecorder.addEvent(Event.parse(text))
         } catch(e: Throwable) {
             logger.error("Error", e)
         }
     }
     fun stop() = mediaJsonRecorder.stop().also {
-        logger.warn("XXX stopping")
+        logger.warn("Stopping")
     }
 
     fun selectDirectory(meetingId: String): File {

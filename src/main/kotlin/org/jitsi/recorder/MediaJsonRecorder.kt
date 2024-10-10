@@ -6,13 +6,38 @@ import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.StartEvent
 import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.queue.PacketQueue
+import java.io.BufferedWriter
 import java.io.File
-import java.nio.file.Path
+import java.io.FileWriter
 import java.time.Clock
-import java.util.concurrent.Executors
 import kotlin.io.encoding.ExperimentalEncodingApi
 
-class MediaJsonRecorder(directory: File) {
+sealed class MediaJsonRecorder(directory: File) {
+    abstract fun addEvent(event: Event)
+    abstract fun stop()
+}
+
+
+class MediaJsonJsonRecorder(directory: File) : MediaJsonRecorder(directory) {
+    private val file: File = File(directory, "recording.json")
+    private val writer: BufferedWriter = BufferedWriter(FileWriter(file, true))
+
+    override fun addEvent(event: Event) {
+        writer.write(event.toJson())
+        writer.newLine()
+        writer.flush()
+    }
+    override fun stop() {
+        writer.close()
+    }
+}
+
+enum class RecordingFormat() {
+    MKA,
+    JSON
+}
+
+class MediaJsonMkaRecorder(directory: File) : MediaJsonRecorder(directory) {
     private val logger = createLogger()
     init {
         logger.info("Will record in $directory")
@@ -23,6 +48,8 @@ class MediaJsonRecorder(directory: File) {
         handleEvent(it)
         true
     }
+
+    override fun addEvent(event: Event) { queue.add(event) }
 
     @OptIn(ExperimentalEncodingApi::class)
     private fun handleEvent(event: Event) {
@@ -42,7 +69,7 @@ class MediaJsonRecorder(directory: File) {
         }
     }
 
-    fun stop() {
+    override fun stop() {
         logger.info("Stopping.")
         mkaRecorder.close()
     }

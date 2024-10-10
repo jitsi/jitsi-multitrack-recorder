@@ -18,11 +18,12 @@ RUN apt-dpkg-wrap apt-get update && \
 #RUN cd build && mvn install -DskipTests -Dktlint.skip
 
 #RUN cp build/target/jitsi-multitrack-recorder-0.1-SNAPSHOT-jar-with-dependencies.jar /
-COPY target/jitsi-multitrack-recorder-0.1-SNAPSHOT-jar-with-dependencies.jar /
+COPY target/jitsi-multitrack-recorder-0.1-SNAPSHOT-jar-with-dependencies.jar /jmr/
+COPY logging.properties /jmr/
+COPY jmr.conf /jmr/
 
 COPY rootfs/ /
 
-#RUN java -jar jitsi-multitrack-recorder-0.1-SNAPSHOT-jar-with-dependencies.jar org.jitsi.recorder.MainKt
 
 
 VOLUME /config

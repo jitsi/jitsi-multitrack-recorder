@@ -13,5 +13,11 @@ class Config {
         val recordingDirectory: String by config {
             "$BASE.recording.directory".from(JitsiConfig.newConfig)
         }
+
+        val recordingFormat: RecordingFormat by config {
+            "$BASE.recording.format".from(JitsiConfig.newConfig).convertFrom<String> {
+                RecordingFormat.valueOf(it.uppercase())
+            }
+        }
     }
 }

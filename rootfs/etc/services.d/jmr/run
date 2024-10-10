@@ -1,20 +1,11 @@
 #!/usr/bin/with-contenv bash
 #
+set -e
+set -x
 
-
-echo "My daemon is running?"
-ls -l /jitsi-multitrack-recorder-0.1-SNAPSHOT-jar-with-dependencies.jar 
 java -version
-java -jar /jitsi-multitrack-recorder-0.1-SNAPSHOT-jar-with-dependencies.jar org.jitsi.recorder.MainKt
 
-
-#java -Djansi.passthrough=true -Dmaven.home=/Applications/IntelliJ IDEA CE.app/Contents/plugins/maven/lib/maven3 -Dclassworlds.conf=/Applications/IntelliJ IDEA CE.app/Contents/plugins/maven/lib/maven3/bin/m2.conf -Dmaven.ext.class.path=/Applications/IntelliJ IDEA CE.app/Contents/plugins/maven/lib/maven-event-listener.jar -javaagent:/Applications/IntelliJ IDEA CE.app/Contents/lib/idea_rt.jar=55349:/Applications/IntelliJ IDEA CE.app/Contents/bin -Dfile.encoding=UTF-8 -classpath /Applications/IntelliJ IDEA CE.app/Contents/plugins/maven/lib/maven3/boot/plexus-classworlds.license:/Applications/IntelliJ IDEA CE.app/Contents/plugins/maven/lib/maven3/boot/plexus-classworlds-2.7.0.jar org.codehaus.classworlds.Launcher -Didea.version=2023.2.7 install -DskipTests -Dktlint.skip
-
-#export JAVA_SYS_PROPS="-Dnet.java.sip.communicator.SC_HOME_DIR_LOCATION=/ -Dnet.java.sip.communicator.SC_HOME_DIR_NAME=config -Djava.util.logging.config.file=/config/logging.properties -Dconfig.file=/config/jvb.conf"
-
-#DAEMON=/usr/share/jitsi-videobridge/jvb.sh
-
-#JVB_CMD="exec $DAEMON"
-#[ -n "$JVB_LOG_FILE" ] && JVB_CMD="$JVB_CMD 2>&1 | tee $JVB_LOG_FILE"
+cd /jmr
+java -Dconfig.file=./jmr.conf -Djava.util.logging.config.file=./logging.properties -jar ./jitsi-multitrack-recorder-0.1-SNAPSHOT-jar-with-dependencies.jar org.jitsi.recorder.MainKt 
 
 #exec s6-setuidgid jvb /bin/bash -c "$JVB_CMD"
