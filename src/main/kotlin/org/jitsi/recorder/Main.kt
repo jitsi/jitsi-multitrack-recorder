@@ -22,7 +22,7 @@ import java.io.File
 import java.time.Duration
 import org.jitsi.recorder.RecorderMetrics.Companion.instance as metrics
 
-val logger = LoggerImpl("org.jitsi.recorder.Main")
+private val logger = LoggerImpl("org.jitsi.recorder.Main")
 
 fun Application.module() {
     install(WebSockets) {
