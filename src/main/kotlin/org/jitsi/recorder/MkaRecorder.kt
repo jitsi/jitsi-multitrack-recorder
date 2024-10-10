@@ -17,17 +17,11 @@
  */
 package org.jitsi.recorder
 
-//import org.ebml.EBMLReader
-//import org.ebml.Element
-//import org.ebml.MasterElement
-//import org.ebml.io.DataSource
-//import org.ebml.io.FileDataSource
 import org.ebml.io.FileDataWriter
 import org.ebml.matroska.MatroskaFileFrame
 import org.ebml.matroska.MatroskaFileTrack
 import org.ebml.matroska.MatroskaFileTrack.TrackType
 import org.ebml.matroska.MatroskaFileWriter
-//import org.jitsi.rtp.extensions.get3Bytes
 import org.jitsi.utils.logging2.createLogger
 import java.io.File
 import java.nio.ByteBuffer
@@ -63,18 +57,18 @@ class MkaRecorder(directory: File) {
         val frame = MatroskaFileFrame()
         frame.data = ByteBuffer.wrap(payload)
         frame.trackNo = track.trackNo
-        //frame.timecode = timecode / 48
-        //logger.warn("Add to $trackName timecode=${timecode/48}")
+        // frame.timecode = timecode / 48
+        // logger.warn("Add to $trackName timecode=${timecode/48}")
         writer.addFrame(frame)
     }
 
     fun close() {
         writer.close()
         ioDW.close()
-        //testDocTraversal()
-        //destination.delete()
+        // testDocTraversal()
+        // destination.delete()
     }
-//
+
 //    fun testDocTraversal() {
 //        val ioDS = FileDataSource(destination.path)
 //        val reader = EBMLReader(ioDS)
@@ -93,11 +87,11 @@ class MkaRecorder(directory: File) {
 //        }
 //
 //        logger.info("Found element: ${".".repeat(level*2)} ${levelN.elementType.name}")
-////        if (levelN.elementType.name == "TimecodeScale") {
-////            levelN.readData(ioDS)
-////            println("oops: "+ levelN.data.get3Bytes())
-////            return
-////        }
+//        if (levelN.elementType.name == "TimecodeScale") {
+//            levelN.readData(ioDS)
+//            println("oops: "+ levelN.data.get3Bytes())
+//            return
+//        }
 //        if (levelN.elementType.name == "Timecode") {
 //            if (x == 0) { x++} else {
 //                levelN.readData(ioDS)

@@ -28,7 +28,7 @@ import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 @OptIn(ExperimentalEncodingApi::class)
-class MkaRecorderTest : ShouldSpec(){
+class MkaRecorderTest : ShouldSpec() {
     init {
         val sample = "/opus-sample3.json"
         val input = javaClass.getResource(sample)?.readText()?.lines()?.dropLast(1) ?: fail("Can not read $sample")
@@ -40,7 +40,6 @@ class MkaRecorderTest : ShouldSpec(){
             val directory = Files.createTempDirectory("MkaRecorderTest").toFile()
             println("Recording to $directory")
             val recorder = MkaRecorder(directory)
-
 
             inputJson.forEach {
                 if (it is StartEvent) {

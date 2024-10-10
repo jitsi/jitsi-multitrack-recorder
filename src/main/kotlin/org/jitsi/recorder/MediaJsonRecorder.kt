@@ -17,7 +17,6 @@
  */
 package org.jitsi.recorder
 
-import kotlin.io.encoding.Base64
 import org.jitsi.mediajson.Event
 import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.StartEvent
@@ -27,13 +26,13 @@ import java.io.BufferedWriter
 import java.io.File
 import java.io.FileWriter
 import java.time.Clock
+import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
 sealed class MediaJsonRecorder(directory: File) {
     abstract fun addEvent(event: Event)
     abstract fun stop()
 }
-
 
 class MediaJsonJsonRecorder(directory: File) : MediaJsonRecorder(directory) {
     private val file: File = File(directory, "recording.json")
@@ -44,18 +43,20 @@ class MediaJsonJsonRecorder(directory: File) : MediaJsonRecorder(directory) {
         writer.newLine()
         writer.flush()
     }
+
     override fun stop() {
         writer.close()
     }
 }
 
-enum class RecordingFormat() {
+enum class RecordingFormat {
     MKA,
     JSON
 }
 
 class MediaJsonMkaRecorder(directory: File) : MediaJsonRecorder(directory) {
     private val logger = createLogger()
+
     init {
         logger.info("Will record in $directory")
     }
@@ -66,16 +67,19 @@ class MediaJsonMkaRecorder(directory: File) : MediaJsonRecorder(directory) {
         true
     }
 
-    override fun addEvent(event: Event) { queue.add(event) }
+    override fun addEvent(event: Event) {
+        queue.add(event)
+    }
 
     @OptIn(ExperimentalEncodingApi::class)
     private fun handleEvent(event: Event) {
-        when(event) {
+        when (event) {
             // split, buffer, generate silence. thread model? queue. metrics?
             is StartEvent -> {
                 logger.info("Start new stream: $event")
                 mkaRecorder.startTrack(event.start.tag)
             }
+
             is MediaEvent -> {
                 mkaRecorder.addFrame(
                     event.media.tag,

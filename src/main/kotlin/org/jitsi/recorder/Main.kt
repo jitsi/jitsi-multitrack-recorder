@@ -43,18 +43,12 @@ private val logger = LoggerImpl("org.jitsi.recorder.Main")
 
 fun Application.module() {
     install(WebSockets) {
-        logger.info("Installing web sockets")
         pingPeriod = Duration.ofSeconds(15)
         timeout = Duration.ofSeconds(15)
         maxFrameSize = Long.MAX_VALUE
         masking = false
     }
     routing {
-        logger.info("Installing routing2?")
-        get("/") {
-            logger.info("http Request")
-            call.respondText("Hello, world!")
-        }
         get("/metrics") {
             val accept = call.request.headers["Accept"]
             logger.info("metrics request accept=$accept")
@@ -83,15 +77,16 @@ fun Application.module() {
             val meetingId = call.parameters["meetingid"] ?: return@webSocket
             logger.info("New recording session for meetingId $meetingId")
             val session = RecordingSession(meetingId)
-            //send(Frame.Text("Please enter your name"))
             for (frame in incoming) {
                 when (frame) {
                     is Frame.Text -> {
                         session.processText(frame.readText())
                     }
+
                     is Frame.Close -> {
                         session.stop()
                     }
+
                     else -> logger.info("Received frame: ${frame::class.simpleName}")
                 }
             }
@@ -119,10 +114,11 @@ class RecordingSession(val meetingId: String) {
     fun processText(text: String) {
         try {
             mediaJsonRecorder.addEvent(Event.parse(text))
-        } catch(e: Throwable) {
+        } catch (e: Throwable) {
             logger.error("Error", e)
         }
     }
+
     fun stop() = mediaJsonRecorder.stop().also {
         logger.warn("Stopping")
     }
