@@ -19,7 +19,6 @@ package org.jitsi.recorder
 
 import io.ktor.http.ContentType
 import io.ktor.server.application.Application
-import io.ktor.server.application.call
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
@@ -36,15 +35,15 @@ import io.prometheus.client.exporter.common.TextFormat
 import org.jitsi.mediajson.Event
 import org.jitsi.utils.logging2.LoggerImpl
 import java.io.File
-import java.time.Duration
+import kotlin.time.Duration.Companion.seconds
 import org.jitsi.recorder.RecorderMetrics.Companion.instance as metrics
 
 private val logger = LoggerImpl("org.jitsi.recorder.Main")
 
 fun Application.module() {
     install(WebSockets) {
-        pingPeriod = Duration.ofSeconds(15)
-        timeout = Duration.ofSeconds(15)
+        pingPeriod = 15.seconds
+        timeout = 15.seconds
         maxFrameSize = Long.MAX_VALUE
         masking = false
     }
