@@ -66,7 +66,7 @@ class MkaRecorderTest : ShouldSpec() {
 
             // Expect as many Cluster elements as packets in the sample.
             traverseMka(mkaFile) { element -> element.elementType.name == "Cluster" } shouldBe
-                    inputJson.count { it is MediaEvent }
+                inputJson.count { it is MediaEvent }
 
             if (debug) {
                 traverseMka(mkaFile) { element, level ->
