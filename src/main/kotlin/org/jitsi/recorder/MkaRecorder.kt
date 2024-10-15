@@ -29,17 +29,20 @@ import java.nio.ByteBuffer
 class MkaRecorder(directory: File) {
     private val logger = createLogger()
     private val destination: File = File(directory, "recording.mka").apply {
-        logger.warn("Writing to $this")
+        logger.info("Writing to $this")
     }
 
     private val ioDW = FileDataWriter(destination.path)
     private val writer: MatroskaFileWriter = MatroskaFileWriter(ioDW)
     private val tracks = mutableMapOf<String, MatroskaFileTrack>()
+    private var initialTimestampMs = -1L
 
     fun startTrack(name: String) {
         logger.info("Starting new track")
         val track = MatroskaFileTrack().apply {
             trackNo = tracks.size + 1
+            trackUID = trackNo.toLong()
+            setName(name)
             trackType = TrackType.AUDIO
             codecID = "A_OPUS"
             defaultDuration = 20000000
@@ -47,18 +50,23 @@ class MkaRecorder(directory: File) {
                 channels = 2
                 samplingFrequency = 48000F
             }
+            seekPreroll = 80_000_000
         }
         tracks[name] = track
         writer.addTrack(track)
     }
 
-    fun addFrame(trackName: String, timecode: Long, payload: ByteArray) {
+    fun addFrame(trackName: String, timestampRtp: Long, payload: ByteArray) {
         val track = tracks[trackName] ?: throw Exception("Track not started")
         val frame = MatroskaFileFrame()
         frame.data = ByteBuffer.wrap(payload)
         frame.trackNo = track.trackNo
-        // frame.timecode = timecode / 48
-        // logger.warn("Add to $trackName timecode=${timecode/48}")
+        if (initialTimestampMs == -1L) {
+            frame.timecode = 0
+            initialTimestampMs = timestampRtp / 48
+        } else {
+            frame.timecode = (timestampRtp / 48) - initialTimestampMs
+        }
         writer.addFrame(frame)
     }
 

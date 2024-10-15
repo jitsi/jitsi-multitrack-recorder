@@ -46,6 +46,9 @@ class MkaRecorderTest : ShouldSpec() {
         val inputJson: List<Event> = input.map { objectMapper.readValue(it, Event::class.java) }
         logger.info("Parsed ${inputJson.size} events")
 
+        /**
+         * This tests the MkaRecorder by recording a sample of Opus packets.
+         */
         context("Recording") {
             val directory = Files.createTempDirectory("MkaRecorderTest").toFile()
             val mkaFile = "$directory/recording.mka"
@@ -77,6 +80,7 @@ class MkaRecorderTest : ShouldSpec() {
         }
     }
 
+    /** Traverse the MKA file and count elements that match the given predicate. */
     private fun traverseMka(path: String, match: (Element) -> Boolean) =
         traverseMka(path) { element, _ -> match(element) }
 
