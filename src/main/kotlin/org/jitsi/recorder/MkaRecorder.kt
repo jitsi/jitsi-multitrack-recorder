@@ -67,6 +67,7 @@ class MkaRecorder(directory: File) {
         } else {
             frame.timecode = (timestampRtp / 48) - initialTimestampMs
         }
+        logger.info("Adding frame to track ${track.trackNo} at timecode ${frame.timecode}")
         writer.addFrame(frame)
     }
 
