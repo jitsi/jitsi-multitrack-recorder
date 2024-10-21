@@ -40,4 +40,4 @@ filter_complex+="amix=inputs=$amix_inputs"
 # Step 5: Build and execute the ffmpeg command
 ffmpeg -i "$input_mka_file" -filter_complex "$filter_complex" "$output_file"
 
-echo "MP3 file has been generated as $output_file."
+echo "Output file has been generated as $output_file."
