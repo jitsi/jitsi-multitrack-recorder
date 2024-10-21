@@ -45,10 +45,12 @@ class MkaRecorder(directory: File) {
             setName(name)
             trackType = TrackType.AUDIO
             codecID = "A_OPUS"
-            defaultDuration = 20000000
+            defaultDuration = 20_000_000
+            isFlagLacing = false
             audio = MatroskaFileTrack.MatroskaAudioTrack().apply {
                 channels = 2
                 samplingFrequency = 48000F
+                outputSamplingFrequency = 48000F
             }
             seekPreroll = 80_000_000
         }
@@ -67,7 +69,7 @@ class MkaRecorder(directory: File) {
         } else {
             frame.timecode = (timestampRtp / 48) - initialTimestampMs
         }
-        logger.info("Adding frame to track ${track.trackNo} at timecode ${frame.timecode}")
+        logger.debug("Adding frame to track ${track.trackNo} at timecode ${frame.timecode}")
         writer.addFrame(frame)
     }
 
