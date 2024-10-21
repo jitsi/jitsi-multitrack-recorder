@@ -1,10 +1,15 @@
 #!/bin/bash
 # depends on ffprobe, ffmpeg, jq, bc, awk
 
-# passed mka file is flatten and converted to mp3 where all streams are mixed into one mono channel
+# passed mka file is flattened and mixed into a single channel mono WAV file.
 
 input_mka_file="$1"
-output_mp3_file="$2"
+output_file="$2"
+
+if [ -z "$input_mka_file" -o -z "$output_file" ] ;then
+  echo "Usage ./flatten-mka.sh <input_file> <output_file>"
+  exit 1
+fi
 
 # Step 1: Get the JSON output from ffprobe
 ffprobe_output=$(ffprobe -i $1 -show_entries stream=index,start_time -v quiet -select_streams a -print_format json -analyzeduration 9223372036854775807)
@@ -33,6 +38,6 @@ filter_complex+=$(for i in $(seq 0 $((amix_inputs - 1))); do echo -n "[a$i]"; do
 filter_complex+="amix=inputs=$amix_inputs"
 
 # Step 5: Build and execute the ffmpeg command
-ffmpeg -i "$input_mka_file" -filter_complex "$filter_complex" -c:a libmp3lame -q:a 2 "$output_mp3_file"
+ffmpeg -i "$input_mka_file" -filter_complex "$filter_complex" "$output_file"
 
-echo "MP3 file has been generated as $output_mp3_file."
+echo "MP3 file has been generated as $output_file."
