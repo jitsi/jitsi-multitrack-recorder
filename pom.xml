@@ -35,7 +35,7 @@
     <dependency>
       <groupId>org.jitsi</groupId>
       <artifactId>jebml</artifactId>
-      <version>2.4.4-2-g0a5139f</version>
+      <version>2.4.4-4-g09e9281</version>
     </dependency>
     <dependency>
       <groupId>io.ktor</groupId>
