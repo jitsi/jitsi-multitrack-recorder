@@ -8,9 +8,9 @@ LABEL org.opencontainers.image.url="https://github.com/jitsi/jitsi-multitrack-re
 LABEL org.opencontainers.image.source="https://github.com/jitsi/jitsi-multitrack-recorder"
 LABEL org.opencontainers.image.documentation="https://github.com/jitsi/jitsi-multitrack-recorder"
 
-RUN apt-dpkg-wrap apt-get update && \
-    apt-dpkg-wrap apt-get install -y maven git && \
-    apt-cleanup
+#RUN apt-dpkg-wrap apt-get update && \
+#    apt-dpkg-wrap apt-get install -y maven git && \
+#    apt-cleanup
 
 #COPY src pom.xml /build/
 #RUN git clone "https://github.com/bgrozev/jicoco" && cd jicoco && git checkout recording
