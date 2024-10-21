@@ -7,7 +7,7 @@ input_mka_file="$1"
 output_mp3_file="$2"
 
 # Step 1: Get the JSON output from ffprobe
-ffprobe_output=$(ffprobe -i $1 -show_entries stream=index,start_time -v quiet -select_streams a -print_format json)
+ffprobe_output=$(ffprobe -i $1 -show_entries stream=index,start_time -v quiet -select_streams a -print_format json -analyzeduration 9223372036854775807)
 
 # Step 2: Parse the JSON to extract audio streams and their start times using jq
 streams=$(echo "$ffprobe_output" | jq -r '.streams[] | "\(.index) \(.start_time)"')
