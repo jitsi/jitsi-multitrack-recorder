@@ -48,7 +48,7 @@ class MkaRecorder(directory: File) {
             defaultDuration = 20_000_000
             isFlagLacing = false
             audio = MatroskaFileTrack.MatroskaAudioTrack().apply {
-                channels = 2
+                channels = 1
                 samplingFrequency = 48000F
                 outputSamplingFrequency = 48000F
             }
