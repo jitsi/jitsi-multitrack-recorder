@@ -18,6 +18,7 @@
 package org.jitsi.recorder
 
 import io.ktor.http.ContentType
+import io.ktor.http.parseHeaderValue
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.engine.embeddedServer
@@ -31,7 +32,6 @@ import io.ktor.server.websocket.timeout
 import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
-import io.prometheus.client.exporter.common.TextFormat
 import org.jitsi.mediajson.Event
 import org.jitsi.utils.logging2.LoggerImpl
 import java.io.File
@@ -49,27 +49,10 @@ fun Application.module() {
     }
     routing {
         get("/metrics") {
-            val accept = call.request.headers["Accept"]
-            logger.info("metrics request accept=$accept")
-            when {
-                accept?.startsWith("application/openmetrics-text") == true ->
-                    call.respondText(
-                        metrics.getPrometheusMetrics(TextFormat.CONTENT_TYPE_OPENMETRICS_100),
-                        contentType = ContentType.parse(TextFormat.CONTENT_TYPE_OPENMETRICS_100)
-                    )
-
-                accept?.startsWith("text/plain") == true ->
-                    call.respondText(
-                        metrics.getPrometheusMetrics(TextFormat.CONTENT_TYPE_004),
-                        contentType = ContentType.parse(TextFormat.CONTENT_TYPE_004)
-                    )
-
-                else ->
-                    call.respondText(
-                        metrics.jsonString,
-                        contentType = ContentType.parse("application/json")
-                    )
-            }
+            val (metrics, contentType) = metrics.getMetrics(
+                parseHeaderValue(call.request.headers["Accept"]).sortedBy { it.quality }.map { it.value }
+            )
+            call.respondText(metrics, contentType = ContentType.parse(contentType))
         }
 
         webSocket("/record/{meetingid}") {
