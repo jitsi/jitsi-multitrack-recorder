@@ -6,6 +6,4 @@ set -x
 java -version
 
 cd /jmr
-java -Dconfig.file=./jmr.conf -Djava.util.logging.config.file=./logging.properties -jar ./jitsi-multitrack-recorder-0.1-SNAPSHOT-jar-with-dependencies.jar org.jitsi.recorder.MainKt 
-
-#exec s6-setuidgid jvb /bin/bash -c "$JVB_CMD"
+java -Dconfig.file=/etc/jitsi/jmr/jmr.conf -Djava.util.logging.config.file=/etc/jitsi/jmr/logging.properties -jar ./jitsi-multitrack-recorder-0.1-SNAPSHOT-jar-with-dependencies.jar org.jitsi.recorder.MainKt

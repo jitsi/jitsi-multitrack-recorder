@@ -1,0 +1,5 @@
+#!/usr/bin/with-contenv bash
+
+mkdir -p /etc/jitsi/jmr
+tpl /defaults/logging.properties > /etc/jitsi/jmr/logging.properties
+tpl /defaults/jmr.conf > /etc/jitsi/jmr/jmr.conf
