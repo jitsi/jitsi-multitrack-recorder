@@ -29,12 +29,12 @@ import java.time.Clock
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
-sealed class MediaJsonRecorder(directory: File) {
+sealed class MediaJsonRecorder {
     abstract fun addEvent(event: Event)
     abstract fun stop()
 }
 
-class MediaJsonJsonRecorder(directory: File) : MediaJsonRecorder(directory) {
+class MediaJsonJsonRecorder(directory: File) : MediaJsonRecorder() {
     private val file: File = File(directory, "recording.json")
     private val writer: BufferedWriter = BufferedWriter(FileWriter(file, true))
 
@@ -54,7 +54,7 @@ enum class RecordingFormat {
     JSON
 }
 
-class MediaJsonMkaRecorder(directory: File) : MediaJsonRecorder(directory) {
+class MediaJsonMkaRecorder(directory: File) : MediaJsonRecorder() {
     private val logger = createLogger()
 
     init {
@@ -77,7 +77,7 @@ class MediaJsonMkaRecorder(directory: File) : MediaJsonRecorder(directory) {
             // split, buffer, generate silence. thread model? queue. metrics?
             is StartEvent -> {
                 logger.info("Start new stream: $event")
-                mkaRecorder.startTrack(event.start.tag)
+                mkaRecorder.startTrack(event.start.tag, event.start.customParameters?.endpointId)
             }
 
             is MediaEvent -> {
