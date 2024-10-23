@@ -19,6 +19,8 @@ package org.jitsi.recorder
 
 import org.ebml.io.FileDataWriter
 import org.ebml.matroska.MatroskaFileFrame
+import org.ebml.matroska.MatroskaFileSimpleTag
+import org.ebml.matroska.MatroskaFileTagEntry
 import org.ebml.matroska.MatroskaFileTrack
 import org.ebml.matroska.MatroskaFileTrack.TrackType
 import org.ebml.matroska.MatroskaFileWriter
@@ -37,8 +39,8 @@ class MkaRecorder(directory: File) {
     private val tracks = mutableMapOf<String, MatroskaFileTrack>()
     private var initialTimestampMs = -1L
 
-    fun startTrack(name: String) {
-        logger.info("Starting new track")
+    fun startTrack(name: String, endpointId: String? = null) {
+        logger.info("Starting new track $name, endpointId=$endpointId")
         val track = MatroskaFileTrack().apply {
             trackNo = tracks.size + 1
             trackUID = trackNo.toLong()
@@ -56,6 +58,20 @@ class MkaRecorder(directory: File) {
         }
         tracks[name] = track
         writer.addTrack(track)
+
+        if (endpointId != null) {
+            writer.addTag(
+                MatroskaFileTagEntry().apply {
+                    trackUID.add(track.trackUID)
+                    simpleTags.add(
+                        MatroskaFileSimpleTag().apply {
+                            this.name = "endpoint_id"
+                            value = endpointId
+                        }
+                    )
+                }
+            )
+        }
     }
 
     fun addFrame(trackName: String, timestampRtp: Long, payload: ByteArray) {
