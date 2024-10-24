@@ -102,7 +102,7 @@
         <version>${surefire.version}</version>
         <configuration>
           <systemPropertyVariables>
-            <java.util.logging.config.file>${project.basedir}/logging.properties</java.util.logging.config.file>
+            <java.util.logging.config.file>${project.basedir}/src/test/resources/logging.properties</java.util.logging.config.file>
             <kotest.framework.classpath.scanning.autoscan.disable>true</kotest.framework.classpath.scanning.autoscan.disable>
           </systemPropertyVariables>
         </configuration>
