@@ -34,6 +34,7 @@ import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
 import org.jitsi.mediajson.Event
 import org.jitsi.utils.logging2.LoggerImpl
+import org.jitsi.utils.logging2.createLogger
 import java.io.File
 import kotlin.time.Duration.Companion.seconds
 import org.jitsi.recorder.RecorderMetrics.Companion.instance as metrics
@@ -87,8 +88,10 @@ fun main(args: Array<String>) {
 }
 
 class RecordingSession(val meetingId: String) {
+    private val logger = createLogger().apply { addContext("meetingId", meetingId) }
+
     private val mediaJsonRecorder = if (Config.recordingFormat == RecordingFormat.MKA) {
-        MediaJsonMkaRecorder(selectDirectory(meetingId))
+        MediaJsonMkaRecorder(selectDirectory(meetingId), logger)
     } else {
         MediaJsonJsonRecorder(selectDirectory(meetingId))
     }

@@ -24,12 +24,13 @@ import org.ebml.matroska.MatroskaFileTagEntry
 import org.ebml.matroska.MatroskaFileTrack
 import org.ebml.matroska.MatroskaFileTrack.TrackType
 import org.ebml.matroska.MatroskaFileWriter
-import org.jitsi.utils.logging2.createLogger
+import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.LoggerImpl
 import java.io.File
 import java.nio.ByteBuffer
 
-class MkaRecorder(directory: File) {
-    private val logger = createLogger()
+class MkaRecorder(directory: File, parentLogger: Logger = LoggerImpl("MkaRecorder")) {
+    private val logger: Logger = parentLogger.createChildLogger(this.javaClass.name)
     private val destination: File = File(directory, "recording.mka").apply {
         logger.info("Writing to $this")
     }
@@ -39,8 +40,8 @@ class MkaRecorder(directory: File) {
     private val tracks = mutableMapOf<String, MatroskaFileTrack>()
     private var initialTimestampMs = -1L
 
-    fun startTrack(name: String, endpointId: String? = null) {
-        logger.info("Starting new track $name, endpointId=$endpointId")
+    fun startTrack(name: String, endpointId: String? = null, numChannels: Int = 1) {
+        logger.info("Starting new track $name, endpointId=$endpointId, channels=$numChannels")
         val track = MatroskaFileTrack().apply {
             trackNo = tracks.size + 1
             trackUID = trackNo.toLong()
@@ -50,7 +51,7 @@ class MkaRecorder(directory: File) {
             defaultDuration = 20_000_000
             isFlagLacing = false
             audio = MatroskaFileTrack.MatroskaAudioTrack().apply {
-                channels = 1
+                channels = numChannels.toShort()
                 samplingFrequency = 48000F
                 outputSamplingFrequency = 48000F
             }

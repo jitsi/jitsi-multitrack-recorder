@@ -40,7 +40,7 @@ class MkaRecorderTest : ShouldSpec() {
 
     init {
         val debug = false
-        val sample = "/opus-sample4.json"
+        val sample = "/opus-stereo.json"
         val input = javaClass.getResource(sample)?.readText()?.lines()?.dropLast(1) ?: fail("Can not read $sample")
         val objectMapper = jacksonObjectMapper()
         val inputJson: List<Event> = input.map { objectMapper.readValue(it, Event::class.java) }
@@ -49,7 +49,7 @@ class MkaRecorderTest : ShouldSpec() {
         /**
          * This tests the MkaRecorder by recording a sample of Opus packets.
          */
-        context("Recording") {
+        context("Record using MkaRecorder directly") {
             val directory = Files.createTempDirectory("MkaRecorderTest").toFile()
             val mkaFile = "$directory/recording.mka"
             val recorder = MkaRecorder(directory)
@@ -63,6 +63,29 @@ class MkaRecorderTest : ShouldSpec() {
                 }
             }
             recorder.close()
+            logger.info("Recording completed.")
+
+            logger.info("Total EBML elements: ${traverseMka(mkaFile) { _ -> true } }")
+
+            // Expect as many SimpleBlock elements as packets in the sample.
+            traverseMka(mkaFile) { element -> element.elementType.name == "SimpleBlock" } shouldBe
+                inputJson.count { it is MediaEvent }
+
+            if (debug) {
+                traverseMka(mkaFile) { element, level ->
+                    logger.info("${"  ".repeat(level)}${element.elementType.name}")
+                    true
+                }
+            }
+        }
+        context("Record using MediaJsonMkaRecorder") {
+            setupInPlaceIoPool()
+            val directory = Files.createTempDirectory("MediaJsonMkaRecorderTest").toFile()
+            val mkaFile = "$directory/recording.mka"
+            val recorder = MediaJsonMkaRecorder(directory, logger)
+
+            inputJson.forEach { recorder.addEvent(it) }
+            recorder.stop()
             logger.info("Recording completed.")
 
             logger.info("Total EBML elements: ${traverseMka(mkaFile) { _ -> true } }")
