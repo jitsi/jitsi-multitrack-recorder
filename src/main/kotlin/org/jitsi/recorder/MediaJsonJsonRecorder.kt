@@ -18,16 +18,24 @@
 package org.jitsi.recorder
 
 import org.jitsi.mediajson.Event
+import java.io.BufferedWriter
+import java.io.File
+import java.io.FileWriter
 
 /**
- * An abstract class that represents a recorder that records MediaJson events.
+ * Record MediaJson events into a JSON file.
  */
-sealed class MediaJsonRecorder {
-    abstract fun addEvent(event: Event)
-    abstract fun stop()
-}
+class MediaJsonJsonRecorder(directory: File) : MediaJsonRecorder() {
+    private val file: File = File(directory, "recording.json")
+    private val writer: BufferedWriter = BufferedWriter(FileWriter(file, true))
 
-enum class RecordingFormat {
-    MKA,
-    JSON
+    override fun addEvent(event: Event) {
+        writer.write(event.toJson())
+        writer.newLine()
+        writer.flush()
+    }
+
+    override fun stop() {
+        writer.close()
+    }
 }
