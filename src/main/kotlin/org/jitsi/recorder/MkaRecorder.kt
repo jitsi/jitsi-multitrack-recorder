@@ -40,8 +40,8 @@ class MkaRecorder(directory: File, parentLogger: Logger = LoggerImpl("MkaRecorde
     private val tracks = mutableMapOf<String, MatroskaFileTrack>()
     private var initialTimestampMs = -1L
 
-    fun startTrack(name: String, endpointId: String? = null, numChannels: Int = 1) {
-        logger.info("Starting new track $name, endpointId=$endpointId, channels=$numChannels")
+    fun startTrack(name: String, endpointId: String? = null) {
+        logger.info("Starting new track $name, endpointId=$endpointId")
         val track = MatroskaFileTrack().apply {
             trackNo = tracks.size + 1
             trackUID = trackNo.toLong()
@@ -51,7 +51,7 @@ class MkaRecorder(directory: File, parentLogger: Logger = LoggerImpl("MkaRecorde
             defaultDuration = 20_000_000
             isFlagLacing = false
             audio = MatroskaFileTrack.MatroskaAudioTrack().apply {
-                channels = numChannels.toShort()
+                channels = 1
                 samplingFrequency = 48000F
                 outputSamplingFrequency = 48000F
             }
@@ -73,6 +73,11 @@ class MkaRecorder(directory: File, parentLogger: Logger = LoggerImpl("MkaRecorde
                 }
             )
         }
+    }
+
+    fun setTrackChannels(trackName: String, numChannels: Int) {
+        val track = tracks[trackName] ?: throw Exception("Track not started")
+        track.audio.channels = numChannels.toShort()
     }
 
     fun addFrame(trackName: String, timestampRtp: Long, payload: ByteArray) {

@@ -89,13 +89,16 @@ class MediaJsonMkaRecorder(directory: File, parentLogger: Logger) : MediaJsonRec
 private class TrackRecorder(
     private val mkaRecorder: MkaRecorder,
     private val trackName: String,
-    private val endpointId: String?
+    endpointId: String?
 ) {
-
     private val logger = createLogger().apply {
         addContext("track", trackName)
     }
-    private var lastChunk = -1
+
+    init {
+        logger.info("Starting new track $trackName")
+        mkaRecorder.startTrack(trackName, endpointId)
+    }
 
     @OptIn(ExperimentalEncodingApi::class)
     fun addPacket(event: MediaEvent) {
@@ -105,11 +108,10 @@ private class TrackRecorder(
             return
         }
 
-        if (lastChunk == -1) {
-            // Start was delayed until now, so we can extract channel count.
-            mkaRecorder.startTrack(trackName, endpointId, if (OpusToc(payload[0]).stereo()) 2 else 1)
+        if (OpusToc(payload.first()).stereo()) {
+            mkaRecorder.setTrackChannels(trackName, 2)
         }
-        lastChunk = event.media.chunk
+
         mkaRecorder.addFrame(
             trackName,
             event.media.timestamp,
