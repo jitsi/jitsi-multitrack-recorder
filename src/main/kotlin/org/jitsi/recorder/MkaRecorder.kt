@@ -51,7 +51,7 @@ class MkaRecorder(directory: File, parentLogger: Logger = LoggerImpl("MkaRecorde
             defaultDuration = 20_000_000
             isFlagLacing = false
             audio = MatroskaFileTrack.MatroskaAudioTrack().apply {
-                channels = 1
+                channels = 2
                 samplingFrequency = 48000F
                 outputSamplingFrequency = 48000F
             }
@@ -80,16 +80,16 @@ class MkaRecorder(directory: File, parentLogger: Logger = LoggerImpl("MkaRecorde
         track.audio.channels = numChannels.toShort()
     }
 
-    fun addFrame(trackName: String, timestampRtp: Long, payload: ByteArray) {
+    fun addFrame(trackName: String, timestampMs: Long, payload: ByteArray) {
         val track = tracks[trackName] ?: throw Exception("Track not started")
         val frame = MatroskaFileFrame()
         frame.data = ByteBuffer.wrap(payload)
         frame.trackNo = track.trackNo
         if (initialTimestampMs == -1L) {
             frame.timecode = 0
-            initialTimestampMs = timestampRtp / 48
+            initialTimestampMs = timestampMs
         } else {
-            frame.timecode = (timestampRtp / 48) - initialTimestampMs
+            frame.timecode = timestampMs - initialTimestampMs
         }
         logger.debug("Adding frame to track ${track.trackNo} at timecode ${frame.timecode}")
         writer.addFrame(frame)

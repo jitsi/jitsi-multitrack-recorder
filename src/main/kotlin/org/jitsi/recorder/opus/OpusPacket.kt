@@ -39,7 +39,7 @@ import kotlin.experimental.or
  * We don't support extracting any of the frames, or even their encoded lengths from a packet.
  */
 @JvmInline
-value class OpusPacket(private val data: ByteArray) {
+value class OpusPacket(val data: ByteArray) {
     init {
         require(data.isNotEmpty()) { "OpusFrame must have at least one byte (TOC)." }
         if (toc().code() == 3) {

@@ -20,7 +20,7 @@ package org.jitsi.recorder
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.kotest.assertions.fail
 import io.kotest.core.spec.style.ShouldSpec
-import io.kotest.matchers.shouldBe
+import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
 import org.ebml.EBMLReader
 import org.ebml.Element
 import org.ebml.MasterElement
@@ -33,19 +33,23 @@ import org.jitsi.utils.logging2.createLogger
 import java.nio.file.Files
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
+import kotlin.random.Random
 
 @OptIn(ExperimentalEncodingApi::class)
 class MkaRecorderTest : ShouldSpec() {
-    val logger = createLogger()
+    private val logger = createLogger()
+
+    val debug = false
+    val sample = "/opus-stereo.json"
+    val loss = 0
+    val input = javaClass.getResource(sample)?.readText()?.lines()?.dropLast(1) ?: fail("Can not read $sample")
+    val objectMapper = jacksonObjectMapper()
+    val inputJson: List<Event> = input.map { objectMapper.readValue(it, Event::class.java) }.also {
+        logger.info("Parsed ${it.size} events")
+    }
 
     init {
-        val debug = false
-        val sample = "/opus-stereo.json"
-        val input = javaClass.getResource(sample)?.readText()?.lines()?.dropLast(1) ?: fail("Can not read $sample")
-        val objectMapper = jacksonObjectMapper()
-        val inputJson: List<Event> = input.map { objectMapper.readValue(it, Event::class.java) }
-        logger.info("Parsed ${inputJson.size} events")
-
+        setupInPlaceIoPool()
         /**
          * This tests the MkaRecorder by recording a sample of Opus packets.
          */
@@ -53,61 +57,70 @@ class MkaRecorderTest : ShouldSpec() {
             val directory = Files.createTempDirectory("MkaRecorderTest").toFile()
             val mkaFile = "$directory/recording.mka"
             val recorder = MkaRecorder(directory)
-
-            inputJson.forEach {
-                if (it is StartEvent) {
-                    logger.info("Starting new track: $it")
-                    recorder.startTrack(it.start.tag)
-                } else if (it is MediaEvent) {
-                    recorder.addFrame(it.media.tag, it.media.timestamp, Base64.decode(it.media.payload))
-                }
-            }
-            recorder.close()
-            logger.info("Recording completed.")
-
-            logger.info("Total EBML elements: ${traverseMka(mkaFile) { _ -> true } }")
-
-            // Expect as many SimpleBlock elements as packets in the sample.
-            traverseMka(mkaFile) { element -> element.elementType.name == "SimpleBlock" } shouldBe
-                inputJson.count { it is MediaEvent }
-
-            if (debug) {
-                traverseMka(mkaFile) { element, level ->
-                    logger.info("${"  ".repeat(level)}${element.elementType.name}")
-                    true
-                }
-            }
+            runOnce(
+                mkaFile,
+                {
+                    when (it) {
+                        is StartEvent -> recorder.startTrack(it.start.tag)
+                        is MediaEvent -> {
+                            recorder.addFrame(it.media.tag, it.media.timestamp, Base64.decode(it.media.payload))
+                        }
+                    }
+                },
+                { recorder.close() }
+            )
         }
         context("Record using MediaJsonMkaRecorder") {
-            setupInPlaceIoPool()
             val directory = Files.createTempDirectory("MediaJsonMkaRecorderTest").toFile()
             val mkaFile = "$directory/recording.mka"
             val recorder = MediaJsonMkaRecorder(directory, logger)
+            runOnce(
+                mkaFile,
+                { recorder.addEvent(it) },
+                { recorder.stop() }
+            )
+        }
+    }
 
-            inputJson.forEach { recorder.addEvent(it) }
-            recorder.stop()
-            logger.info("Recording completed.")
+    fun runOnce(mkaFile: String, addEvent: (Event) -> Unit, close: () -> Unit) {
+        var mediaPackets = 0
+        var lostPackets = 0
+        logger.warn("Using ${loss * 100}% packet loss.")
 
-            logger.info("Total EBML elements: ${traverseMka(mkaFile) { _ -> true } }")
-
-            // Expect as many SimpleBlock elements as packets in the sample.
-            traverseMka(mkaFile) { element -> element.elementType.name == "SimpleBlock" } shouldBe
-                inputJson.count { it is MediaEvent }
-
-            if (debug) {
-                traverseMka(mkaFile) { element, level ->
-                    logger.info("${"  ".repeat(level)}${element.elementType.name}")
-                    true
+        inputJson.forEach {
+            if (it is MediaEvent) {
+                if (Random.nextDouble() > loss) {
+                    addEvent(it)
+                    mediaPackets++
+                } else {
+                    lostPackets++
                 }
+            } else {
+                addEvent(it)
+            }
+        }
+        close()
+        logger.info("Recording completed.")
+        if (lostPackets > 0) logger.warn("Lost $lostPackets packets.")
+
+        logger.info("Total EBML elements: ${traverseMka(mkaFile) { _ -> true } }")
+
+        // Expect as many SimpleBlock elements as opus packets in the sample.
+        traverseMka(mkaFile) { it.elementType.name == "SimpleBlock" } shouldBeGreaterThanOrEqual mediaPackets
+
+        if (debug) {
+            traverseMka2(mkaFile) { element, level ->
+                logger.info("${"  ".repeat(level)}${element.elementType.name}")
+                true
             }
         }
     }
 
     /** Traverse the MKA file and count elements that match the given predicate. */
     private fun traverseMka(path: String, match: (Element) -> Boolean) =
-        traverseMka(path) { element, _ -> match(element) }
+        traverseMka2(path) { element, _ -> match(element) }
 
-    private fun traverseMka(path: String, match: (Element, Int) -> Boolean): Int {
+    private fun traverseMka2(path: String, match: (Element, Int) -> Boolean): Int {
         val ioDS = FileDataSource(path)
         val reader = EBMLReader(ioDS)
         var level0 = reader.readNextElement()

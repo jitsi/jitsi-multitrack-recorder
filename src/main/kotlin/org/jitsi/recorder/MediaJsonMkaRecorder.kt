@@ -20,9 +20,9 @@ package org.jitsi.recorder
 import org.jitsi.mediajson.Event
 import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.StartEvent
-import org.jitsi.recorder.opus.OpusToc
+import org.jitsi.recorder.opus.OpusPacket
+import org.jitsi.recorder.opus.PacketLossConcealmentInserter
 import org.jitsi.utils.logging2.Logger
-import org.jitsi.utils.logging2.createLogger
 import org.jitsi.utils.queue.PacketQueue
 import java.io.File
 import java.time.Clock
@@ -68,7 +68,8 @@ class MediaJsonMkaRecorder(directory: File, parentLogger: Logger) : MediaJsonRec
                     trackRecorders[event.start.tag] = TrackRecorder(
                         mkaRecorder,
                         event.start.tag,
-                        event.start.customParameters?.endpointId
+                        event.start.customParameters?.endpointId,
+                        logger
                     )
                 }
             }
@@ -89,11 +90,14 @@ class MediaJsonMkaRecorder(directory: File, parentLogger: Logger) : MediaJsonRec
 private class TrackRecorder(
     private val mkaRecorder: MkaRecorder,
     private val trackName: String,
-    endpointId: String?
+    endpointId: String?,
+    parentLogger: Logger
 ) {
-    private val logger = createLogger().apply {
+    private val logger: Logger = parentLogger.createChildLogger(this.javaClass.name).apply {
         addContext("track", trackName)
     }
+    private val plcInserter = PacketLossConcealmentInserter(logger)
+    private var stereo = false
 
     init {
         logger.info("Starting new track $trackName")
@@ -107,16 +111,21 @@ private class TrackRecorder(
             logger.warn("Ignoring empty payload: $event")
             return
         }
+        val opusPacket = OpusPacket(payload)
 
-        if (OpusToc(payload.first()).stereo()) {
+        if (!stereo && opusPacket.toc().stereo()) {
+            stereo = true
             mkaRecorder.setTrackChannels(trackName, 2)
+            logger.info("Setting stereo=true.")
         }
 
-        mkaRecorder.addFrame(
-            trackName,
-            event.media.timestamp,
-            payload
-        )
+        plcInserter.add(opusPacket, event.media.timestamp).forEach {
+            mkaRecorder.addFrame(
+                trackName,
+                it.timestampMs,
+                it.packet.data
+            )
+        }
     }
 }
 
