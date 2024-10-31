@@ -20,6 +20,7 @@ package org.jitsi.recorder
 import org.jitsi.mediajson.Event
 import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.StartEvent
+import org.jitsi.recorder.opus.GapTooLargeException
 import org.jitsi.recorder.opus.OpusPacket
 import org.jitsi.recorder.opus.PacketLossConcealmentInserter
 import org.jitsi.utils.logging2.Logger
@@ -75,7 +76,22 @@ class MediaJsonMkaRecorder(directory: File, parentLogger: Logger) : MediaJsonRec
             }
 
             is MediaEvent -> {
-                trackRecorders[event.media.tag]?.addPacket(event) ?: logger.warn("No track for ${event.media.tag}")
+                val trackRecorder = trackRecorders[event.media.tag] ?: run {
+                    logger.warn("No track for ${event.media.tag}")
+                    return
+                }
+
+                try {
+                    trackRecorder.addPacket(event)
+                } catch (e: GapTooLargeException) {
+                    logger.info("Large gap encountered (${e.gapDuration}), resetting track.")
+                    trackRecorders[event.media.tag] = TrackRecorder(
+                        mkaRecorder,
+                        event.media.tag,
+                        trackRecorder.endpointId,
+                        logger
+                    )
+                }
             }
         }
     }
@@ -90,13 +106,13 @@ class MediaJsonMkaRecorder(directory: File, parentLogger: Logger) : MediaJsonRec
 private class TrackRecorder(
     private val mkaRecorder: MkaRecorder,
     private val trackName: String,
-    endpointId: String?,
+    val endpointId: String?,
     parentLogger: Logger
 ) {
     private val logger: Logger = parentLogger.createChildLogger(this.javaClass.name).apply {
         addContext("track", trackName)
     }
-    private val plcInserter = PacketLossConcealmentInserter(logger)
+    private val plcInserter = PacketLossConcealmentInserter(Config.maxGapDuration, logger)
     private var stereo = false
 
     init {

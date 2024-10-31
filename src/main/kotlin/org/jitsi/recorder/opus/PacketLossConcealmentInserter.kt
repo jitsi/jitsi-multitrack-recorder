@@ -19,11 +19,17 @@ package org.jitsi.recorder.opus
 
 import org.jitsi.utils.logging2.Logger
 import org.jitsi.utils.logging2.LoggerImpl
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * Insert packet loss concealment packets into a stream of [OpusPacket].
  */
-class PacketLossConcealmentInserter(parentLogger: Logger = LoggerImpl("PacketLossConcealmentInserter")) {
+class PacketLossConcealmentInserter(
+    private val maxGapDuration: Duration = 1.minutes,
+    parentLogger: Logger = LoggerImpl("PacketLossConcealmentInserter")
+) {
     private val logger: Logger = parentLogger.createChildLogger(this.javaClass.name)
     private var nextSampleTs = -1L
     private var previousToc: OpusToc? = null
@@ -51,6 +57,9 @@ class PacketLossConcealmentInserter(parentLogger: Logger = LoggerImpl("PacketLos
         } else {
             val missing = ts48kHz - nextSampleTs
             val missingMs = missing.toMs()
+            if (missingMs.milliseconds > maxGapDuration) {
+                throw GapTooLargeException(missingMs.milliseconds)
+            }
             logger.warn("Missing $missing ticks = $missingMs ms (and $remainingMs ms remaining)")
 
             val plc = OpusPacket.generatePlc(missingMs + remainingMs, previousToc ?: opusPacket.toc())
@@ -76,3 +85,4 @@ fun Long.toMs(): Double = this.toDouble() / 48.0
 fun Double.to48kHz(): Long = (this * 48).toLong()
 
 data class OpusPacketAndTimestamp(val packet: OpusPacket, val timestampMs: Long)
+class GapTooLargeException(val gapDuration: Duration) : Exception("Gap too large")
