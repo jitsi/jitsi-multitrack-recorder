@@ -80,8 +80,7 @@ fun Application.module() {
 }
 
 fun main(args: Array<String>) {
-    logger.info("Running main, port=${Config.port}, recordingDirectory=${Config.recordingDirectory}")
-    logger.info("Recording format: ${Config.recordingFormat}")
+    logger.info("Starting jitsi-multitrack-recorder with config:\n $Config")
     metrics.sessionsStarted.inc()
     embeddedServer(Netty, port = Config.port, host = "0.0.0.0", module = Application::module)
         .start(wait = true)

@@ -59,6 +59,12 @@
       <version>${kotest.version}</version>
       <scope>test</scope>
     </dependency>
+      <dependency>
+          <groupId>org.jitsi</groupId>
+          <artifactId>jicoco-test-kotlin</artifactId>
+          <version>1.1-144-ga2c5ec1</version>
+          <scope>test</scope>
+      </dependency>
   </dependencies>
   <build>
     <testSourceDirectory>src/test/kotlin</testSourceDirectory>

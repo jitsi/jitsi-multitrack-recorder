@@ -21,11 +21,13 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.kotest.assertions.fail
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.ints.shouldBeGreaterThanOrEqual
+import io.kotest.matchers.shouldBe
 import org.ebml.EBMLReader
 import org.ebml.Element
 import org.ebml.MasterElement
 import org.ebml.io.DataSource
 import org.ebml.io.FileDataSource
+import org.jitsi.config.withNewConfig
 import org.jitsi.mediajson.Event
 import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.StartEvent
@@ -34,19 +36,15 @@ import java.nio.file.Files
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.random.Random
+import kotlin.time.Duration.Companion.seconds
 
 @OptIn(ExperimentalEncodingApi::class)
 class MkaRecorderTest : ShouldSpec() {
     private val logger = createLogger()
 
     val debug = false
-    val sample = "/opus-stereo.json"
     val loss = 0
-    val input = javaClass.getResource(sample)?.readText()?.lines()?.dropLast(1) ?: fail("Can not read $sample")
     val objectMapper = jacksonObjectMapper()
-    val inputJson: List<Event> = input.map { objectMapper.readValue(it, Event::class.java) }.also {
-        logger.info("Parsed ${it.size} events")
-    }
 
     init {
         setupInPlaceIoPool()
@@ -58,6 +56,7 @@ class MkaRecorderTest : ShouldSpec() {
             val mkaFile = "$directory/recording.mka"
             val recorder = MkaRecorder(directory)
             runOnce(
+                "/sample-stereo.json",
                 mkaFile,
                 {
                     when (it) {
@@ -75,14 +74,38 @@ class MkaRecorderTest : ShouldSpec() {
             val mkaFile = "$directory/recording.mka"
             val recorder = MediaJsonMkaRecorder(directory, logger)
             runOnce(
+                "/sample-stereo.json",
                 mkaFile,
                 { recorder.addEvent(it) },
                 { recorder.stop() }
             )
         }
+        context("Test PLC with a big gap") {
+            withNewConfig("jitsi-multitrack-recorder.recording.max-gap-duration = 5 seconds") {
+                Config.maxGapDuration shouldBe 5.seconds
+
+                val directory = Files.createTempDirectory("MediaJsonMkaRecorderTest").toFile()
+                val mkaFile = "$directory/recording.mka"
+                val recorder = MediaJsonMkaRecorder(directory, logger)
+                runOnce(
+                    "/sample-gap.json",
+                    mkaFile,
+                    { recorder.addEvent(it) },
+                    { recorder.stop() }
+                )
+
+                // The sample has 2 endpoints, but one has a gap of 10 seconds, so it should be split into 2 tracks.
+                traverseMka(mkaFile) { it.elementType.name == "TrackEntry" } shouldBe 3
+            }
+        }
     }
 
-    fun runOnce(mkaFile: String, addEvent: (Event) -> Unit, close: () -> Unit) {
+    fun runOnce(sample: String, mkaFile: String, addEvent: (Event) -> Unit, close: () -> Unit) {
+        val input = javaClass.getResource(sample)?.readText()?.lines()?.dropLast(1) ?: fail("Can not read $sample")
+        val inputJson: List<Event> = input.map { objectMapper.readValue(it, Event::class.java) }.also {
+            logger.info("Parsed ${it.size} events")
+        }
+
         var mediaPackets = 0
         var lostPackets = 0
         logger.warn("Using ${loss * 100}% packet loss.")

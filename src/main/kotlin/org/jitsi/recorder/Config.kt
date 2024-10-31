@@ -19,6 +19,8 @@ package org.jitsi.recorder
 
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
+import kotlin.time.Duration
+import kotlin.time.toKotlinDuration
 
 class Config {
     companion object {
@@ -36,5 +38,18 @@ class Config {
                 RecordingFormat.valueOf(it.uppercase())
             }
         }
+
+        val maxGapDuration: Duration by config {
+            "$BASE.recording.max-gap-duration".from(JitsiConfig.newConfig).convertFrom<java.time.Duration> {
+                it.toKotlinDuration()
+            }
+        }
+
+        override fun toString(): String = """
+            port: $port
+            recordingDirectory: $recordingDirectory
+            recordingFormat: $recordingFormat
+            maxGapDuration: $maxGapDuration
+        """.trimIndent()
     }
 }
