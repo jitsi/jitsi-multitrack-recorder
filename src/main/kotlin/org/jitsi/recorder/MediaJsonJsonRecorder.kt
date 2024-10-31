@@ -17,18 +17,25 @@
  */
 package org.jitsi.recorder
 
-import org.jitsi.utils.concurrent.CustomizableThreadFactory
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
+import org.jitsi.mediajson.Event
+import java.io.BufferedWriter
+import java.io.File
+import java.io.FileWriter
 
-object TaskPools {
-    private val defaultIoPool: ExecutorService =
-        Executors.newCachedThreadPool(CustomizableThreadFactory("Global IO Pool", false))
+/**
+ * Record MediaJson events into a JSON file.
+ */
+class MediaJsonJsonRecorder(directory: File) : MediaJsonRecorder() {
+    private val file: File = File(directory, "recording.json")
+    private val writer: BufferedWriter = BufferedWriter(FileWriter(file, true))
 
-    @JvmStatic
-    var ioPool: ExecutorService = defaultIoPool
+    override fun addEvent(event: Event) {
+        writer.write(event.toJson())
+        writer.newLine()
+        writer.flush()
+    }
 
-    fun resetIoPool() {
-        ioPool = defaultIoPool
+    override fun stop() {
+        writer.close()
     }
 }

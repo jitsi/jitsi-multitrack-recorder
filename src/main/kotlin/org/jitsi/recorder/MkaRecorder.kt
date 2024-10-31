@@ -24,12 +24,13 @@ import org.ebml.matroska.MatroskaFileTagEntry
 import org.ebml.matroska.MatroskaFileTrack
 import org.ebml.matroska.MatroskaFileTrack.TrackType
 import org.ebml.matroska.MatroskaFileWriter
-import org.jitsi.utils.logging2.createLogger
+import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.logging2.LoggerImpl
 import java.io.File
 import java.nio.ByteBuffer
 
-class MkaRecorder(directory: File) {
-    private val logger = createLogger()
+class MkaRecorder(directory: File, parentLogger: Logger = LoggerImpl("MkaRecorder")) {
+    private val logger: Logger = parentLogger.createChildLogger(this.javaClass.name)
     private val destination: File = File(directory, "recording.mka").apply {
         logger.info("Writing to $this")
     }
@@ -50,7 +51,7 @@ class MkaRecorder(directory: File) {
             defaultDuration = 20_000_000
             isFlagLacing = false
             audio = MatroskaFileTrack.MatroskaAudioTrack().apply {
-                channels = 1
+                channels = 2
                 samplingFrequency = 48000F
                 outputSamplingFrequency = 48000F
             }
@@ -74,16 +75,21 @@ class MkaRecorder(directory: File) {
         }
     }
 
-    fun addFrame(trackName: String, timestampRtp: Long, payload: ByteArray) {
+    fun setTrackChannels(trackName: String, numChannels: Int) {
+        val track = tracks[trackName] ?: throw Exception("Track not started")
+        track.audio.channels = numChannels.toShort()
+    }
+
+    fun addFrame(trackName: String, timestampMs: Long, payload: ByteArray) {
         val track = tracks[trackName] ?: throw Exception("Track not started")
         val frame = MatroskaFileFrame()
         frame.data = ByteBuffer.wrap(payload)
         frame.trackNo = track.trackNo
         if (initialTimestampMs == -1L) {
             frame.timecode = 0
-            initialTimestampMs = timestampRtp / 48
+            initialTimestampMs = timestampMs
         } else {
-            frame.timecode = (timestampRtp / 48) - initialTimestampMs
+            frame.timecode = timestampMs - initialTimestampMs
         }
         logger.debug("Adding frame to track ${track.trackNo} at timecode ${frame.timecode}")
         writer.addFrame(frame)
