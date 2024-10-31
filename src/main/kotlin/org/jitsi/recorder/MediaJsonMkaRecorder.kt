@@ -85,12 +85,15 @@ class MediaJsonMkaRecorder(directory: File, parentLogger: Logger) : MediaJsonRec
                     trackRecorder.addPacket(event)
                 } catch (e: GapTooLargeException) {
                     logger.info("Large gap encountered (${e.gapDuration}), resetting track.")
-                    trackRecorders[event.media.tag] = TrackRecorder(
+                    TrackRecorder(
                         mkaRecorder,
                         event.media.tag,
                         trackRecorder.endpointId,
                         logger
-                    )
+                    ).let {
+                        trackRecorders[event.media.tag] = it
+                        it.addPacket(event)
+                    }
                 }
             }
         }
