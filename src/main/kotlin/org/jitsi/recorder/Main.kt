@@ -51,7 +51,7 @@ fun Application.module() {
     routing {
         get("/metrics") {
             val (metrics, contentType) = metrics.getMetrics(
-                parseHeaderValue(call.request.headers["Accept"]).sortedBy { it.quality }.map { it.value }
+                parseHeaderValue(call.request.headers["Accept"]).sortedByDescending { it.quality }.map { it.value }
             )
             call.respondText(metrics, contentType = ContentType.parse(contentType))
         }
