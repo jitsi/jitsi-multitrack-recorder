@@ -12,7 +12,3 @@ LABEL org.opencontainers.image.documentation="https://github.com/jitsi/jitsi-mul
 COPY target/jitsi-multitrack-recorder-0.1-SNAPSHOT-jar-with-dependencies.jar /jmr/
 COPY rootfs/ /
 
-
-
-VOLUME /config
-
