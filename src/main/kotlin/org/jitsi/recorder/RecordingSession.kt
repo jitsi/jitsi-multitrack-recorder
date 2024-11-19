@@ -20,14 +20,15 @@ package org.jitsi.recorder
 import org.jitsi.mediajson.Event
 import org.jitsi.utils.logging2.createLogger
 import java.io.File
+import org.jitsi.recorder.RecorderMetrics.Companion.instance as metrics
 
 class RecordingSession(private val meetingId: String) {
     private val logger = createLogger().apply { addContext("meetingId", meetingId) }
     private val directory = selectDirectory(meetingId)
 
     init {
-        RecorderMetrics.instance.sessionsStarted.inc()
-        RecorderMetrics.instance.currentSessions.inc()
+        metrics.sessionsStarted.inc()
+        metrics.currentSessions.inc()
     }
 
     private val mediaJsonRecorder = if (Config.recordingFormat == RecordingFormat.MKA) {
@@ -46,7 +47,7 @@ class RecordingSession(private val meetingId: String) {
 
     fun stop() = mediaJsonRecorder.stop().also {
         logger.warn("Stopping")
-        RecorderMetrics.instance.currentSessions.dec()
+        metrics.currentSessions.dec()
         if (!Config.finalizeScript.isNullOrBlank()) {
             logger.warn("Running finalize script")
             val process = ProcessBuilder(
@@ -59,8 +60,13 @@ class RecordingSession(private val meetingId: String) {
                 redirectOutput(logFile)
                 redirectError(logFile)
             }.start()
-            val ret = process.waitFor()
-            logger.warn("Finalise script returned $ret")
+
+            process.waitFor().let {
+                if (it != 0) {
+                    metrics.finalizeErrors.inc()
+                    logger.warn("Error from finalize: $it")
+                }
+            }
         }
     }
 
