@@ -86,13 +86,14 @@ fun main(args: Array<String>) {
         .start(wait = true)
 }
 
-class RecordingSession(val meetingId: String) {
+class RecordingSession(private val meetingId: String) {
     private val logger = createLogger().apply { addContext("meetingId", meetingId) }
+    private val directory = selectDirectory(meetingId)
 
     private val mediaJsonRecorder = if (Config.recordingFormat == RecordingFormat.MKA) {
-        MediaJsonMkaRecorder(selectDirectory(meetingId), logger)
+        MediaJsonMkaRecorder(directory, logger)
     } else {
-        MediaJsonJsonRecorder(selectDirectory(meetingId))
+        MediaJsonJsonRecorder(directory)
     }
 
     fun processText(text: String) {
@@ -105,6 +106,21 @@ class RecordingSession(val meetingId: String) {
 
     fun stop() = mediaJsonRecorder.stop().also {
         logger.warn("Stopping")
+        if (!Config.finalizeScript.isNullOrBlank()) {
+            logger.warn("Running finalize script")
+            val process = ProcessBuilder(
+                Config.finalizeScript,
+                meetingId,
+                directory.absolutePath,
+                Config.recordingFormat.toString()
+            ).apply {
+                val logFile = File(directory, "finalize.log")
+                redirectOutput(logFile)
+                redirectError(logFile)
+            }.start()
+            val ret = process.waitFor()
+            logger.warn("Finalise script returned $ret")
+        }
     }
 
     fun selectDirectory(meetingId: String): File {

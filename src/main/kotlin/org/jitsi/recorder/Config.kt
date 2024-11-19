@@ -19,12 +19,14 @@ package org.jitsi.recorder
 
 import org.jitsi.config.JitsiConfig
 import org.jitsi.metaconfig.config
+import org.jitsi.metaconfig.optionalconfig
 import kotlin.time.Duration
 import kotlin.time.toKotlinDuration
 
 class Config {
     companion object {
         const val BASE = "jitsi-multitrack-recorder"
+
         val port: Int by config {
             "$BASE.port".from(JitsiConfig.newConfig)
         }
@@ -45,11 +47,16 @@ class Config {
             }
         }
 
+        val finalizeScript: String? by optionalconfig {
+            "$BASE.finalize-script".from(JitsiConfig.newConfig)
+        }
+
         override fun toString(): String = """
             port: $port
             recordingDirectory: $recordingDirectory
             recordingFormat: $recordingFormat
             maxGapDuration: $maxGapDuration
+            finalizeScript: $finalizeScript
         """.trimIndent()
     }
 }
