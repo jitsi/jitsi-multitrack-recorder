@@ -33,6 +33,8 @@ import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
 import org.jitsi.mediajson.Event
+import org.jitsi.metaconfig.MetaconfigLogger
+import org.jitsi.metaconfig.MetaconfigSettings
 import org.jitsi.utils.logging2.LoggerImpl
 import org.jitsi.utils.logging2.createLogger
 import java.io.File
@@ -79,11 +81,11 @@ fun Application.module() {
     }
 }
 
-fun main(args: Array<String>) {
+fun main() {
+    setupMetaconfigLogger()
     logger.info("Starting jitsi-multitrack-recorder with config:\n $Config")
     metrics.sessionsStarted.inc()
-    embeddedServer(Netty, port = Config.port, host = "0.0.0.0", module = Application::module)
-        .start(wait = true)
+    embeddedServer(Netty, port = Config.port, host = "0.0.0.0", module = Application::module).start(wait = true)
 }
 
 class RecordingSession(private val meetingId: String) {
@@ -132,6 +134,22 @@ class RecordingSession(private val meetingId: String) {
         } else {
             // TODO create a new one
             throw FileAlreadyExistsException(file, null, "Directory for meetingId $meetingId already exists")
+        }
+    }
+}
+
+/** Wire the jitsi-metaconfig logger into ours */
+private fun setupMetaconfigLogger() {
+    val configLogger = LoggerImpl("org.jitsi.jibri.config")
+    MetaconfigSettings.logger = object : MetaconfigLogger {
+        override fun debug(block: () -> String) {
+            configLogger.debug(block)
+        }
+        override fun error(block: () -> String) {
+            configLogger.error(block())
+        }
+        override fun warn(block: () -> String) {
+            configLogger.warn(block)
         }
     }
 }
