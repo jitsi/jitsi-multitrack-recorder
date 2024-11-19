@@ -32,12 +32,9 @@ import io.ktor.server.websocket.timeout
 import io.ktor.server.websocket.webSocket
 import io.ktor.websocket.Frame
 import io.ktor.websocket.readText
-import org.jitsi.mediajson.Event
 import org.jitsi.metaconfig.MetaconfigLogger
 import org.jitsi.metaconfig.MetaconfigSettings
 import org.jitsi.utils.logging2.LoggerImpl
-import org.jitsi.utils.logging2.createLogger
-import java.io.File
 import kotlin.time.Duration.Companion.seconds
 import org.jitsi.recorder.RecorderMetrics.Companion.instance as metrics
 
@@ -85,62 +82,6 @@ fun main() {
     setupMetaconfigLogger()
     logger.info("Starting jitsi-multitrack-recorder with config:\n $Config")
     embeddedServer(Netty, port = Config.port, host = "0.0.0.0", module = Application::module).start(wait = true)
-}
-
-class RecordingSession(private val meetingId: String) {
-    private val logger = createLogger().apply { addContext("meetingId", meetingId) }
-    private val directory = selectDirectory(meetingId)
-
-    init {
-        metrics.sessionsStarted.inc()
-        metrics.currentSessions.inc()
-    }
-
-    private val mediaJsonRecorder = if (Config.recordingFormat == RecordingFormat.MKA) {
-        MediaJsonMkaRecorder(directory, logger)
-    } else {
-        MediaJsonJsonRecorder(directory)
-    }
-
-    fun processText(text: String) {
-        try {
-            mediaJsonRecorder.addEvent(Event.parse(text))
-        } catch (e: Throwable) {
-            logger.error("Error", e)
-        }
-    }
-
-    fun stop() = mediaJsonRecorder.stop().also {
-        logger.warn("Stopping")
-        metrics.currentSessions.dec()
-        if (!Config.finalizeScript.isNullOrBlank()) {
-            logger.warn("Running finalize script")
-            val process = ProcessBuilder(
-                Config.finalizeScript,
-                meetingId,
-                directory.absolutePath,
-                Config.recordingFormat.toString()
-            ).apply {
-                val logFile = File(directory, "finalize.log")
-                redirectOutput(logFile)
-                redirectError(logFile)
-            }.start()
-            val ret = process.waitFor()
-            logger.warn("Finalise script returned $ret")
-        }
-    }
-
-    private fun selectDirectory(meetingId: String): File {
-        val path = "${Config.recordingDirectory}/$meetingId"
-        val file = File(path)
-        if (!file.exists()) {
-            file.mkdirs()
-            return file
-        } else {
-            // TODO create a new one
-            throw FileAlreadyExistsException(file, null, "Directory for meetingId $meetingId already exists")
-        }
-    }
 }
 
 /** Wire the jitsi-metaconfig logger into ours */
