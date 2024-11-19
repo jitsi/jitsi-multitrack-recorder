@@ -29,6 +29,7 @@ import java.io.File
 import java.time.Clock
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
+import org.jitsi.recorder.RecorderMetrics.Companion.instance as metrics
 
 /**
  * Record MediaJson events into a Matroska file.
@@ -85,6 +86,7 @@ class MediaJsonMkaRecorder(directory: File, parentLogger: Logger) : MediaJsonRec
                     trackRecorder.addPacket(event)
                 } catch (e: GapTooLargeException) {
                     logger.info("Large gap encountered (${e.gapDuration}), resetting track.")
+                    metrics.trackResets.inc()
                     TrackRecorder(
                         mkaRecorder,
                         event.media.tag,
@@ -138,11 +140,15 @@ private class TrackRecorder(
             logger.info("Setting stereo=true.")
         }
 
-        plcInserter.add(opusPacket, event.media.timestamp).forEach {
+        val plcAndPacket = plcInserter.add(opusPacket, event.media.timestamp)
+        plcAndPacket.forEachIndexed { i, packet ->
+            val metric = if (i == plcAndPacket.size - 1) metrics.recordedMilliseconds else metrics.plcMilliseconds
+            metric.addAndGet(packet.packet.duration())
+
             mkaRecorder.addFrame(
                 trackName,
-                it.timestampMs,
-                it.packet.data
+                packet.timestampMs,
+                packet.packet.data
             )
         }
     }
