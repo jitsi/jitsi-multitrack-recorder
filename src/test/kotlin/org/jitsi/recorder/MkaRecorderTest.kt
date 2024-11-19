@@ -27,7 +27,6 @@ import org.ebml.Element
 import org.ebml.MasterElement
 import org.ebml.io.DataSource
 import org.ebml.io.FileDataSource
-import org.jitsi.config.withNewConfig
 import org.jitsi.mediajson.Event
 import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.StartEvent
@@ -81,7 +80,7 @@ class MkaRecorderTest : ShouldSpec() {
             )
         }
         context("Test PLC with a big gap") {
-            withNewConfig("jitsi-multitrack-recorder.recording.max-gap-duration = 5 seconds") {
+            withConfig("jitsi-multitrack-recorder.recording.max-gap-duration = 5 seconds") {
                 Config.maxGapDuration shouldBe 5.seconds
 
                 val directory = Files.createTempDirectory("MediaJsonMkaRecorderTest").toFile()

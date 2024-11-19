@@ -17,7 +17,9 @@
  */
 package org.jitsi.recorder
 
-import org.jitsi.config.JitsiConfig
+import com.typesafe.config.ConfigFactory
+import org.jitsi.config.ConfigSourceWrapper
+import org.jitsi.config.TypesafeConfigSource
 import org.jitsi.metaconfig.config
 import org.jitsi.metaconfig.optionalconfig
 import kotlin.time.Duration
@@ -25,30 +27,31 @@ import kotlin.time.toKotlinDuration
 
 class Config {
     companion object {
-        const val BASE = "jitsi-multitrack-recorder"
+        val configSource = ConfigSourceWrapper(TypesafeConfigSource("config", ConfigFactory.load()))
+        private const val BASE = "jitsi-multitrack-recorder"
 
         val port: Int by config {
-            "$BASE.port".from(JitsiConfig.newConfig)
+            "$BASE.port".from(configSource)
         }
 
         val recordingDirectory: String by config {
-            "$BASE.recording.directory".from(JitsiConfig.newConfig)
+            "$BASE.recording.directory".from(configSource)
         }
 
         val recordingFormat: RecordingFormat by config {
-            "$BASE.recording.format".from(JitsiConfig.newConfig).convertFrom<String> {
+            "$BASE.recording.format".from(configSource).convertFrom<String> {
                 RecordingFormat.valueOf(it.uppercase())
             }
         }
 
         val maxGapDuration: Duration by config {
-            "$BASE.recording.max-gap-duration".from(JitsiConfig.newConfig).convertFrom<java.time.Duration> {
+            "$BASE.recording.max-gap-duration".from(configSource).convertFrom<java.time.Duration> {
                 it.toKotlinDuration()
             }
         }
 
         val finalizeScript: String? by optionalconfig {
-            "$BASE.finalize-script".from(JitsiConfig.newConfig)
+            "$BASE.finalize-script".from(configSource)
         }
 
         override fun toString(): String = """

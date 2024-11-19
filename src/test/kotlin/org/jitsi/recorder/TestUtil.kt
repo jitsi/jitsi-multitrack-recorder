@@ -17,6 +17,8 @@
  */
 package org.jitsi.recorder
 
+import com.typesafe.config.ConfigFactory
+import org.jitsi.config.TypesafeConfigSource
 import java.util.concurrent.Callable
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
@@ -56,4 +58,15 @@ internal fun setupInPlaceIoPool() {
         override fun <T : Any?> invokeAny(tasks: MutableCollection<out Callable<T>>, timeout: Long, unit: TimeUnit): T =
             TODO("Not yet implemented")
     }
+}
+
+fun withConfig(config: String, block: () -> Unit) {
+    val originalConfigSource = Config.configSource.innerSource
+
+    Config.configSource.innerSource = TypesafeConfigSource(
+        "custom config",
+        ConfigFactory.parseString(config).run { withFallback(ConfigFactory.load()) }
+    )
+    block()
+    Config.configSource.innerSource = originalConfigSource
 }
