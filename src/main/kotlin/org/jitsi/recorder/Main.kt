@@ -84,13 +84,17 @@ fun Application.module() {
 fun main() {
     setupMetaconfigLogger()
     logger.info("Starting jitsi-multitrack-recorder with config:\n $Config")
-    metrics.sessionsStarted.inc()
     embeddedServer(Netty, port = Config.port, host = "0.0.0.0", module = Application::module).start(wait = true)
 }
 
 class RecordingSession(private val meetingId: String) {
     private val logger = createLogger().apply { addContext("meetingId", meetingId) }
     private val directory = selectDirectory(meetingId)
+
+    init {
+        metrics.sessionsStarted.inc()
+        metrics.currentSessions.inc()
+    }
 
     private val mediaJsonRecorder = if (Config.recordingFormat == RecordingFormat.MKA) {
         MediaJsonMkaRecorder(directory, logger)
@@ -108,6 +112,7 @@ class RecordingSession(private val meetingId: String) {
 
     fun stop() = mediaJsonRecorder.stop().also {
         logger.warn("Stopping")
+        metrics.currentSessions.dec()
         if (!Config.finalizeScript.isNullOrBlank()) {
             logger.warn("Running finalize script")
             val process = ProcessBuilder(
@@ -125,7 +130,7 @@ class RecordingSession(private val meetingId: String) {
         }
     }
 
-    fun selectDirectory(meetingId: String): File {
+    private fun selectDirectory(meetingId: String): File {
         val path = "${Config.recordingDirectory}/$meetingId"
         val file = File(path)
         if (!file.exists()) {

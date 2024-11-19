@@ -21,6 +21,8 @@ import org.jitsi.metrics.MetricsContainer
 
 class RecorderMetrics private constructor() : MetricsContainer(namespace = "jitsi_recorder") {
     val sessionsStarted = registerCounter("sessions_started", "Number of sessions started")
+    val currentSessions = registerLongGauge("current_sessions", "Number of current sessions")
+
     companion object {
         /**
          * The singleton instance of `MetricsContainer`.
