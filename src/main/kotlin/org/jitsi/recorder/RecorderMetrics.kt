@@ -21,6 +21,18 @@ import org.jitsi.metrics.MetricsContainer
 
 class RecorderMetrics private constructor() : MetricsContainer(namespace = "jitsi_recorder") {
     val sessionsStarted = registerCounter("sessions_started", "Number of sessions started")
+    val currentSessions = registerLongGauge("current_sessions", "Number of current sessions")
+    val finalizeErrors = registerCounter("finalize_errors", "Number of finalize errors")
+    val trackResets = registerCounter("track_resets", "Number of tracks reset due to long gaps")
+    val recordedMilliseconds = registerDoubleGauge(
+        "recorded_milliseconds",
+        "Duration of tracks recorded in milliseconds"
+    )
+    val plcMilliseconds = registerDoubleGauge(
+        "plc_milliseconds",
+        "Duration of recorded packet concealment packets in milliseconds"
+    )
+
     companion object {
         /**
          * The singleton instance of `MetricsContainer`.
