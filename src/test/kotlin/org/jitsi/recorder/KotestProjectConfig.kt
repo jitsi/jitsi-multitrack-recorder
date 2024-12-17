@@ -18,6 +18,7 @@
 package org.jitsi.recorder
 
 import io.kotest.core.config.AbstractProjectConfig
+import io.kotest.matchers.shouldBe
 import org.jitsi.metaconfig.MetaconfigSettings
 
 class KotestProjectConfig : AbstractProjectConfig() {
@@ -25,5 +26,9 @@ class KotestProjectConfig : AbstractProjectConfig() {
         // The only purpose of config caching is performance. We always want caching disabled in tests (so we can
         // freely modify the config without affecting other tests executing afterwards).
         MetaconfigSettings.cacheEnabled = false
+    }
+    override suspend fun afterProject() = super.afterProject().also {
+        RecorderMetrics.instance.queueExceptions.get() shouldBe 0
+        RecorderMetrics.instance.queueEventsDropped.get() shouldBe 0
     }
 }

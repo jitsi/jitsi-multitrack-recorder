@@ -46,8 +46,14 @@ class MediaJsonMkaRecorder(directory: File, parentLogger: Logger) : MediaJsonRec
         true
     }.also {
         it.setErrorHandler(object : ErrorHandler {
-            override fun packetDropped() = logger.warn("Dropped an event.")
-            override fun packetHandlingFailed(t: Throwable) = logger.error("Error handling event: ", t)
+            override fun packetDropped() {
+                logger.warn("Dropped an event.")
+                RecorderMetrics.instance.queueEventsDropped.inc()
+            }
+            override fun packetHandlingFailed(t: Throwable) {
+                logger.error("Error handling event: ", t)
+                RecorderMetrics.instance.queueExceptions.inc()
+            }
         })
     }
     private val trackRecorders = mutableMapOf<String, TrackRecorder>()
