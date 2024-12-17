@@ -32,6 +32,8 @@ class RecorderMetrics private constructor() : MetricsContainer(namespace = "jits
         "plc_milliseconds",
         "Duration of recorded packet concealment packets in milliseconds"
     )
+    val queueEventsDropped = registerCounter("queue_events_dropped", "Number of events dropped")
+    val queueExceptions = registerCounter("queue_exceptions", "Number of exceptions from the event queue")
 
     companion object {
         /**
