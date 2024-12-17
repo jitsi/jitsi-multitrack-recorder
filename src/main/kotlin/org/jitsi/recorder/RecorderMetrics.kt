@@ -34,6 +34,7 @@ class RecorderMetrics private constructor() : MetricsContainer(namespace = "jits
     )
     val queueEventsDropped = registerCounter("queue_events_dropped", "Number of events dropped")
     val queueExceptions = registerCounter("queue_exceptions", "Number of exceptions from the event queue")
+    val uncaughtExceptions = registerCounter("uncaught_exceptions", "Number of uncaught exceptions")
 
     companion object {
         /**
