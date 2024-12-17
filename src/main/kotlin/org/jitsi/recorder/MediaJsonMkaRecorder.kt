@@ -24,6 +24,7 @@ import org.jitsi.recorder.opus.GapTooLargeException
 import org.jitsi.recorder.opus.OpusPacket
 import org.jitsi.recorder.opus.PacketLossConcealmentInserter
 import org.jitsi.utils.logging2.Logger
+import org.jitsi.utils.queue.ErrorHandler
 import org.jitsi.utils.queue.PacketQueue
 import java.io.File
 import java.time.Clock
@@ -43,6 +44,11 @@ class MediaJsonMkaRecorder(directory: File, parentLogger: Logger) : MediaJsonRec
     val queue = EventQueue {
         handleEvent(it)
         true
+    }.also {
+        it.setErrorHandler(object : ErrorHandler {
+            override fun packetDropped() = logger.warn("Dropped an event.")
+            override fun packetHandlingFailed(t: Throwable) = logger.error("Error handling event: ", t)
+        })
     }
     private val trackRecorders = mutableMapOf<String, TrackRecorder>()
 
