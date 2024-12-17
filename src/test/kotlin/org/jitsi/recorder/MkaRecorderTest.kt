@@ -104,7 +104,7 @@ class MkaRecorderTest : ShouldSpec() {
             val mkaFile = "$directory/recording.mka"
             val recorder = MediaJsonMkaRecorder(directory, logger)
             val sample = "/sample-stereo.json"
-            val times = 14
+            val times = 43
 
             val input = javaClass.getResource(sample)?.readText()?.lines()?.dropLast(1) ?: fail("Can not read $sample")
             val tracksInInput = input.map {
@@ -132,6 +132,10 @@ class MkaRecorderTest : ShouldSpec() {
             val tracksInFile = traverseMka(mkaFile) { it.elementType.name == "TrackEntry" }
             logger.info("File contains $tracksInFile tracks")
             tracksInFile shouldBe tracksInInput * times
+
+            val tagsInFile = traverseMka(mkaFile) { it.elementType.name == "Tag" }
+            logger.info("File contains $tagsInFile tags")
+            tagsInFile shouldBe tracksInInput * times
         }
     }
 
