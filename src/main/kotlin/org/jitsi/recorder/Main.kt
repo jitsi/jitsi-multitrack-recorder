@@ -79,8 +79,15 @@ fun Application.module() {
 }
 
 fun main() {
-    setupMetaconfigLogger()
     logger.info("Starting jitsi-multitrack-recorder with config:\n $Config")
+
+    setupMetaconfigLogger()
+
+    Thread.setDefaultUncaughtExceptionHandler { _, e ->
+        RecorderMetrics.instance.uncaughtExceptions.inc()
+        logger.error("Uncaught exception", e)
+    }
+
     embeddedServer(Netty, port = Config.port, host = "0.0.0.0", module = Application::module).start(wait = true)
 }
 
