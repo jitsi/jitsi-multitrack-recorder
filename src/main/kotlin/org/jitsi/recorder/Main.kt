@@ -73,7 +73,9 @@ fun Application.module() {
                 }
             }
             logger.info("Completed")
-            session.stop()
+            TaskPools.ioPool.execute {
+                session.stop()
+            }
         }
     }
 }
