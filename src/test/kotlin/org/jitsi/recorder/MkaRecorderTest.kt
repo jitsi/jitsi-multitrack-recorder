@@ -28,7 +28,9 @@ import org.ebml.MasterElement
 import org.ebml.io.DataSource
 import org.ebml.io.FileDataSource
 import org.jitsi.mediajson.Event
+import org.jitsi.mediajson.Media
 import org.jitsi.mediajson.MediaEvent
+import org.jitsi.mediajson.Start
 import org.jitsi.mediajson.StartEvent
 import org.jitsi.utils.logging2.createLogger
 import java.nio.file.Files
@@ -97,6 +99,67 @@ class MkaRecorderTest : ShouldSpec() {
                 traverseMka(mkaFile) { it.elementType.name == "TrackEntry" } shouldBe 3
             }
         }
+        context("Test number of tracks") {
+            val directory = Files.createTempDirectory("MediaJsonMkaRecorderTest").toFile()
+            val mkaFile = "$directory/recording.mka"
+            val recorder = MediaJsonMkaRecorder(directory, logger)
+            val sample = "/sample-stereo.json"
+            val times = 43
+
+            val input = javaClass.getResource(sample)?.readText()?.lines()?.dropLast(1) ?: fail("Can not read $sample")
+            val tracksInInput = input.map {
+                objectMapper.readValue(it, Event::class.java)
+            }.filterIsInstance<StartEvent>().count()
+
+            val inputJson = mutableListOf<Event>()
+            repeat(times) { i ->
+                inputJson.addAll(
+                    input.map {
+                        objectMapper.readValue(it, Event::class.java)
+                    }.map {
+                        it.clone(input.size * i, i)
+                    }
+                )
+            }
+
+            runOnce(
+                mkaFile,
+                { recorder.addEvent(it) },
+                { recorder.stop() },
+                inputJson
+            )
+
+            val tracksInFile = traverseMka(mkaFile) { it.elementType.name == "TrackEntry" }
+            logger.info("File contains $tracksInFile tracks")
+            tracksInFile shouldBe tracksInInput * times
+
+            val tagsInFile = traverseMka(mkaFile) { it.elementType.name == "Tag" }
+            logger.info("File contains $tagsInFile tags")
+            tagsInFile shouldBe tracksInInput * times
+        }
+    }
+
+    private fun Event.clone(seqOffset: Int, i: Int): Event = when (this) {
+        is StartEvent -> StartEvent(
+            seqOffset + sequenceNumber,
+            Start(
+                "${start.tag}-$i",
+                start.mediaFormat,
+                start.customParameters
+            )
+        )
+
+        is MediaEvent -> MediaEvent(
+            seqOffset + sequenceNumber,
+            Media(
+                "${media.tag}-$i",
+                media.chunk,
+                media.timestamp,
+                media.payload
+            )
+        )
+
+        else -> fail("Unknown event type: ${this.javaClass.simpleName}")
     }
 
     fun runOnce(sample: String, mkaFile: String, addEvent: (Event) -> Unit, close: () -> Unit) {
@@ -104,7 +167,10 @@ class MkaRecorderTest : ShouldSpec() {
         val inputJson: List<Event> = input.map { objectMapper.readValue(it, Event::class.java) }.also {
             logger.info("Parsed ${it.size} events")
         }
+        runOnce(mkaFile, addEvent, close, inputJson)
+    }
 
+    fun runOnce(mkaFile: String, addEvent: (Event) -> Unit, close: () -> Unit, inputJson: List<Event>) {
         var mediaPackets = 0
         var lostPackets = 0
         logger.warn("Using ${loss * 100}% packet loss.")
