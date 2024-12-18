@@ -115,8 +115,8 @@ class MediaJsonMkaRecorder(directory: File, parentLogger: Logger) : MediaJsonRec
 
     override fun stop() {
         logger.info("Stopping.")
-        mkaRecorder.close()
         queue.close()
+        mkaRecorder.close()
     }
 }
 
@@ -172,7 +172,9 @@ class EventQueue(packetHandler: (Event) -> Boolean) : PacketQueue<Event>(
     "id",
     packetHandler,
     TaskPools.ioPool,
-    Clock.systemUTC()
+    Clock.systemUTC(),
+    // interruptOnClose
+    true
 )
 
 /**
