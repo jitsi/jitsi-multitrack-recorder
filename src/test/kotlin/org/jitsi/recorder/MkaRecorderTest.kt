@@ -33,7 +33,9 @@ import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.Start
 import org.jitsi.mediajson.StartEvent
 import org.jitsi.utils.logging2.createLogger
+import java.io.File
 import java.nio.file.Files
+import java.time.Instant
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlin.random.Random
@@ -104,7 +106,7 @@ class MkaRecorderTest : ShouldSpec() {
             val mkaFile = "$directory/recording.mka"
             val recorder = MediaJsonMkaRecorder(directory, logger)
             val sample = "/sample-stereo.json"
-            val times = 43
+            val times = 500
 
             val input = javaClass.getResource(sample)?.readText()?.lines()?.dropLast(1) ?: fail("Can not read $sample")
             val tracksInInput = input.map {
@@ -124,8 +126,15 @@ class MkaRecorderTest : ShouldSpec() {
 
             runOnce(
                 mkaFile,
-                { recorder.addEvent(it) },
-                { recorder.stop() },
+                {
+                    recorder.addEvent(it)
+                },
+                {
+                    val start = Instant.now()
+                    recorder.stop()
+                    logger.info("File size: ${File(mkaFile).length()}")
+                    logger.info("Stopping took ${Instant.now().toEpochMilli() - start.toEpochMilli()} ms")
+                },
                 inputJson
             )
 

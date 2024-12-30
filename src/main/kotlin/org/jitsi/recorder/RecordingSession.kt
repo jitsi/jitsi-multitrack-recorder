@@ -45,11 +45,16 @@ class RecordingSession(private val meetingId: String) {
         }
     }
 
-    fun stop() = mediaJsonRecorder.stop().also {
-        logger.warn("Stopping")
+    fun stop() {
+        logger.info("Stopping")
+        mediaJsonRecorder.stop()
         metrics.currentSessions.dec()
+        finalize()
+    }
+
+    private fun finalize() {
         if (!Config.finalizeScript.isNullOrBlank()) {
-            logger.warn("Running finalize script")
+            logger.info("Running finalize script")
             val process = ProcessBuilder(
                 Config.finalizeScript,
                 meetingId,
