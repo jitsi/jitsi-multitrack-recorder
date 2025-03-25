@@ -38,7 +38,7 @@ jobs:
         with:
           context: ./
           platforms: linux/amd64,linux/arm64
-          load: true
+          pull: true
           push: true
           tags: |
             jitsi/jitsi-multitrack-recorder:latest
