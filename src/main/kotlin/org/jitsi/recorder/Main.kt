@@ -56,25 +56,31 @@ fun Application.module() {
         }
 
         webSocket("/record/{meetingid}") {
-            val meetingId = call.parameters["meetingid"] ?: return@webSocket
-            logger.info("New recording session for meetingId $meetingId")
-            val session = RecordingSession(meetingId)
-            for (frame in incoming) {
-                when (frame) {
-                    is Frame.Text -> {
-                        session.processText(frame.readText())
-                    }
+            try {
+                val meetingId = call.parameters["meetingid"] ?: return@webSocket
+                logger.info("New recording session for meetingId $meetingId")
+                val session = RecordingSession(meetingId)
+                for (frame in incoming) {
+                    when (frame) {
+                        is Frame.Text -> {
+                            session.processText(frame.readText())
+                        }
 
-                    is Frame.Close -> {
-                        session.stop()
-                    }
+                        is Frame.Close -> {
+                            session.stop()
+                        }
 
-                    else -> logger.info("Received frame: ${frame::class.simpleName}")
+                        else -> logger.info("Received frame: ${frame::class.simpleName}")
+                    }
                 }
-            }
-            logger.info("Completed")
-            TaskPools.ioPool.execute {
-                session.stop()
+                logger.info("Completed")
+                TaskPools.ioPool.execute {
+                    session.stop()
+                }
+            } catch (e: Exception) {
+                logger.error("Error in recording session: ${e.message}")
+                RecorderMetrics.instance.uncaughtExceptions.inc()
+                throw e
             }
         }
     }
