@@ -60,10 +60,10 @@ class PacketLossConcealmentInserter(
             if (missingMs.milliseconds > maxGapDuration) {
                 throw GapTooLargeException(missingMs.milliseconds)
             }
-            logger.warn("Missing $missing ticks = $missingMs ms (and $remainingMs ms remaining)")
+            logger.debug("Missing $missing ticks = $missingMs ms (and $remainingMs ms remaining)")
 
             val plc = OpusPacket.generatePlc(missingMs + remainingMs, previousToc ?: opusPacket.toc())
-            logger.warn("Filling in with ${plc.first.size} packets, remainingMs=${plc.second}")
+            logger.debug("Filling in with ${plc.first.size} packets, remainingMs=${plc.second}")
             remainingMs = plc.second
 
             plc.first.forEach {
