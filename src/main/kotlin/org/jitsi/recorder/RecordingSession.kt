@@ -70,6 +70,8 @@ class RecordingSession(private val meetingId: String) {
                 if (it != 0) {
                     metrics.finalizeErrors.inc()
                     logger.warn("Error from finalize: $it")
+                } else {
+                    logger.info("Finalize script completed successfully")
                 }
             }
         }
