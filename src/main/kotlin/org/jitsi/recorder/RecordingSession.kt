@@ -70,20 +70,31 @@ class RecordingSession(private val meetingId: String) {
                 if (it != 0) {
                     metrics.finalizeErrors.inc()
                     logger.warn("Error from finalize: $it")
+                } else {
+                    logger.info("Finalize script completed successfully")
                 }
             }
         }
     }
 
     private fun selectDirectory(meetingId: String): File {
-        val path = "${Config.recordingDirectory}/$meetingId"
-        val file = File(path)
-        if (!file.exists()) {
-            file.mkdirs()
-            return file
-        } else {
-            // TODO create a new one
-            throw FileAlreadyExistsException(file, null, "Directory for meetingId $meetingId already exists")
-        }
+        var suffix = ""
+        var counter = 1
+        var file: File
+
+        do {
+            val path = "${Config.recordingDirectory}/$meetingId$suffix"
+            file = File(path)
+
+            if (!file.exists()) {
+                file.mkdirs()
+                return file
+            }
+
+            suffix = "-$counter"
+            counter++
+        } while (counter < 100)
+
+        throw RuntimeException("Failed to create directory for meetingId $meetingId after 100 attempts")
     }
 }
