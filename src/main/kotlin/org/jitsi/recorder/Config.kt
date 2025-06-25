@@ -54,6 +54,10 @@ class Config {
             "$BASE.finalize-script".from(configSource)
         }
 
+        val logFinalizeOutput: Boolean by config {
+            "$BASE.log-finalize-script".from(configSource)
+        }
+
         override fun toString(): String = """
             port: $port
             recordingDirectory: $recordingDirectory
