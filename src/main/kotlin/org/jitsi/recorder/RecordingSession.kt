@@ -55,16 +55,39 @@ class RecordingSession(private val meetingId: String) {
     private fun finalize() {
         if (!Config.finalizeScript.isNullOrBlank()) {
             logger.info("Running finalize script")
+            val logFile = File(directory, "finalize.log")
             val process = ProcessBuilder(
                 Config.finalizeScript,
                 meetingId,
                 directory.absolutePath,
                 Config.recordingFormat.toString()
             ).apply {
-                val logFile = File(directory, "finalize.log")
-                redirectOutput(logFile)
-                redirectError(logFile)
+                if (!Config.logFinalizeOutput) {
+                    redirectOutput(logFile)
+                    redirectError(logFile)
+                }
             }.start()
+
+            if (Config.logFinalizeOutput) {
+                logFile.outputStream().use { fileOut ->
+                    val logLine: (String) -> Unit = { line ->
+                        logger.info("[finalize] $line")
+                        fileOut.write((line + "\n").toByteArray())
+                        fileOut.flush()
+                    }
+
+                    val stdoutThread = Thread {
+                        process.inputStream.bufferedReader().forEachLine(logLine)
+                    }
+                    val stderrThread = Thread {
+                        process.errorStream.bufferedReader().forEachLine(logLine)
+                    }
+                    stdoutThread.start()
+                    stderrThread.start()
+                    stdoutThread.join()
+                    stderrThread.join()
+                }
+            }
 
             process.waitFor().let {
                 if (it != 0) {
