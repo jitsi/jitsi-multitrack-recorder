@@ -55,7 +55,7 @@ class Config {
         }
 
         val logFinalizeOutput: Boolean by config {
-            "$BASE.log-finalize-script".from(configSource)
+            "$BASE.log-finalize-output".from(configSource)
         }
 
         override fun toString(): String = """
