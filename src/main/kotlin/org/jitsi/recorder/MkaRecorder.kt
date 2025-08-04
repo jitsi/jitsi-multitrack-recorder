@@ -37,13 +37,19 @@ class MkaRecorder(directory: File, parentLogger: Logger = LoggerImpl("MkaRecorde
 
     private val ioDW = FileDataWriter(destination.path)
     private val writer: MatroskaFileWriter = MatroskaFileWriter(ioDW)
-    private val tracks = mutableMapOf<String, MatroskaFileTrack>()
+    private var trackCount = 0
     private var initialTimestampMs = -1L
 
+    /**
+     * There can be more than one track with the same name (when an endpoint is muted for a long time and then unmuted),
+     * this map stores the latest track for each name.
+     */
+    private val tracks = mutableMapOf<String, MatroskaFileTrack>()
+
     fun startTrack(name: String, endpointId: String? = null) {
-        logger.info("Starting new track $name, endpointId=$endpointId")
+        logger.info("Starting new track $name, endpointId=$endpointId, trackNo=$trackCount")
         val track = MatroskaFileTrack().apply {
-            trackNo = tracks.size + 1
+            trackNo = trackCount++
             trackUID = trackNo.toLong()
             setName(name)
             trackType = TrackType.AUDIO
