@@ -37,7 +37,8 @@ class MkaRecorder(directory: File, parentLogger: Logger = LoggerImpl("MkaRecorde
 
     private val ioDW = FileDataWriter(destination.path)
     private val writer: MatroskaFileWriter = MatroskaFileWriter(ioDW)
-    private var trackCount = 0
+    // Total number of tracks added. Start at 1 to correctly match tracks with their tags.
+    private var trackCount = 1
     private var initialTimestampMs = -1L
 
     /**
