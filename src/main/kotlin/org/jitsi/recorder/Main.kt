@@ -30,7 +30,9 @@ import io.ktor.server.websocket.WebSockets
 import io.ktor.server.websocket.pingPeriod
 import io.ktor.server.websocket.timeout
 import io.ktor.server.websocket.webSocket
+import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
+import io.ktor.websocket.close
 import io.ktor.websocket.readText
 import org.jitsi.metaconfig.MetaconfigLogger
 import org.jitsi.metaconfig.MetaconfigSettings
@@ -58,6 +60,10 @@ fun Application.module() {
         webSocket("/record/{meetingid}") {
             try {
                 val meetingId = call.parameters["meetingid"] ?: return@webSocket
+                if (!meetingId.matches(Regex("[a-zA-Z0-9_-]+"))) {
+                    close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Invalid meetingId"))
+                    return@webSocket
+                }
                 logger.info("New recording session for meetingId $meetingId")
                 val session = RecordingSession(meetingId)
                 for (frame in incoming) {
