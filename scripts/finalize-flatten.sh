@@ -15,5 +15,5 @@ if [[ "$FORMAT" == "MKA" ]] ;then
 fi
 
 if [[ "$JMR_FINALIZE_WEBHOOK" != "" ]] ;then
-  curl -s -o /dev/null "$JMR_FINALIZE_WEBHOOK?meetingId=$MEETING_ID"
+  curl -s -o /dev/null --get --data-urlencode "meetingId=$MEETING_ID" "$JMR_FINALIZE_WEBHOOK"
 fi
