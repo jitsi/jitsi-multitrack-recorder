@@ -18,6 +18,10 @@
 package org.jitsi.recorder
 
 import org.jitsi.mediajson.Event
+import org.jitsi.mediajson.PingEvent
+import org.jitsi.mediajson.PongEvent
+import org.jitsi.mediajson.SessionEndEvent
+import org.jitsi.mediajson.TranscriptionResultEvent
 import org.jitsi.utils.logging2.createLogger
 import java.io.File
 import org.jitsi.recorder.RecorderMetrics.Companion.instance as metrics
@@ -37,11 +41,19 @@ class RecordingSession(private val meetingId: String) {
         MediaJsonJsonRecorder(directory)
     }
 
-    fun processText(text: String) {
-        try {
-            mediaJsonRecorder.addEvent(Event.parse(text))
+    fun processText(text: String): String? {
+        return try {
+            when (val event = Event.parse(text)) {
+                is PingEvent -> PongEvent(event.id).toJson()
+                is PongEvent, is SessionEndEvent, is TranscriptionResultEvent -> null
+                else -> {
+                    mediaJsonRecorder.addEvent(event)
+                    null
+                }
+            }
         } catch (e: Throwable) {
             logger.error("Error", e)
+            null
         }
     }
 

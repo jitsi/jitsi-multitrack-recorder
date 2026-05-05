@@ -67,6 +67,7 @@ class MkaRecorderTest : ShouldSpec() {
                         is MediaEvent -> {
                             recorder.addFrame(it.media.tag, it.media.timestamp, Base64.decode(it.media.payload))
                         }
+                        else -> {}
                     }
                 },
                 { recorder.close() }

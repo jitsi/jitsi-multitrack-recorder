@@ -69,7 +69,7 @@ fun Application.module() {
                 for (frame in incoming) {
                     when (frame) {
                         is Frame.Text -> {
-                            session.processText(frame.readText())
+                            session.processText(frame.readText())?.let { send(Frame.Text(it)) }
                         }
 
                         is Frame.Close -> {
