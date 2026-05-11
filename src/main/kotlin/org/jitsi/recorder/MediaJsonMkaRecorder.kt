@@ -110,6 +110,7 @@ class MediaJsonMkaRecorder(directory: File, parentLogger: Logger) : MediaJsonRec
                     }
                 }
             }
+            else -> {}
         }
     }
 
@@ -194,4 +195,5 @@ private fun Event.assertFormatAndGetSeq(): Int = when (this) {
     is MediaEvent -> {
         sequenceNumber
     }
+    else -> throw IllegalArgumentException("Unexpected event type: ${this::class.simpleName}")
 }
