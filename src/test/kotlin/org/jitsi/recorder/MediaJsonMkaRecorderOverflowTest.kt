@@ -20,29 +20,21 @@ package org.jitsi.recorder
 import io.kotest.assertions.fail
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
-import kotlinx.coroutines.runBlocking
-import org.ebml.EBMLReader
-import org.ebml.Element
-import org.ebml.MasterElement
-import org.ebml.io.DataSource
-import org.ebml.io.FileDataSource
 import org.jitsi.mediajson.Event
 import org.jitsi.mediajson.Media
 import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.Start
 import org.jitsi.mediajson.StartEvent
 import org.jitsi.utils.logging2.createLogger
-import java.io.IOException
 import java.nio.file.Files
-import java.nio.file.Path
 import java.util.concurrent.AbstractExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.seconds
 
 class MediaJsonMkaRecorderOverflowTest : ShouldSpec() {
     init {
-        should("preserve every event during a high-load burst") {
+        should("preserve every event during a high-load burst").config(timeout = 20.seconds) {
             val trackCount = 20
             val packetsPerTrack = 500
             val expectedBlocks = trackCount * packetsPerTrack
@@ -85,26 +77,18 @@ class MediaJsonMkaRecorderOverflowTest : ShouldSpec() {
                 val recording = directory.resolve("recording.mka")
                 val recorder = MediaJsonMkaRecorder(directory.toFile(), createLogger())
                 val droppedBefore = RecorderMetrics.instance.queueEventsDropped.get()
-                val startedAt = System.nanoTime()
-                runBlocking {
-                    for (event in starts + mediaEvents) recorder.addEvent(event)
-                }
-                val producerMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startedAt)
+                for (event in starts + mediaEvents) recorder.addEvent(event)
 
                 // Wait behind the consumer on the same serial executor. This does not slow it down; it only makes
                 // stop independent from the separate close/write race covered by MediaJsonMkaRecorderRaceTest.
                 executor.awaitIdle()
-                val stopFailure = runCatching { runBlocking { recorder.stop() } }.exceptionOrNull()
+                val stopFailure = runCatching { recorder.stop() }.exceptionOrNull()
                 executor.shutdown()
                 executor.awaitTermination(5, TimeUnit.SECONDS) shouldBe true
 
                 val dropped = RecorderMetrics.instance.queueEventsDropped.get() - droppedBefore
                 val recordedBlocks = countMkaElements(recording) { it.elementType.name == "SimpleBlock" }
-                println(
-                    "load result: produced=$expectedBlocks, recorded=$recordedBlocks, dropped=$dropped, " +
-                        "producerMs=$producerMillis, size=${Files.size(recording)}"
-                )
-                ffprobe(recording)?.let { it.duration shouldNotBe null }
+                playableDurationWithFfprobe(recording)
 
                 stopFailure shouldBe null
                 dropped shouldBe 0
@@ -114,67 +98,6 @@ class MediaJsonMkaRecorderOverflowTest : ShouldSpec() {
                 TaskPools.ioPool = originalIoPool
             }
         }
-    }
-
-    private fun ffprobe(recording: Path): FfprobeResult? = try {
-        val process = ProcessBuilder(
-            "ffprobe",
-            "-v",
-            "error",
-            "-show_entries",
-            "format=duration",
-            "-of",
-            "default=nw=1:nk=1",
-            recording.toString()
-        ).redirectErrorStream(true).start()
-        val output = process.inputStream.bufferedReader().readText().trim()
-        val exitCode = process.waitFor()
-        val result = FfprobeResult(
-            exitCode,
-            output,
-            output.lineSequence().mapNotNull(String::toDoubleOrNull).singleOrNull()
-        )
-        println(
-            "ffprobe ${recording.fileName}: size=${Files.size(recording)}, " +
-                "exit=${result.exitCode}, output=${result.output.replace('\n', '|')}"
-        )
-        result
-    } catch (_: IOException) {
-        println("ffprobe is not installed; using the built-in EBML validation only")
-        null
-    }
-
-    private fun countMkaElements(path: Path, match: (Element) -> Boolean): Int {
-        val dataSource = FileDataSource(path.toString())
-        val reader = EBMLReader(dataSource)
-        var element = reader.readNextElement()
-        var count = 0
-        while (element != null) {
-            if (match(element)) count++
-            count += countChildren(element, dataSource, reader, match)
-            element.skipData(dataSource)
-            element = reader.readNextElement()
-        }
-        return count
-    }
-
-    private fun countChildren(
-        element: Element,
-        dataSource: DataSource,
-        reader: EBMLReader,
-        match: (Element) -> Boolean
-    ): Int {
-        if (element !is MasterElement) return 0
-
-        var count = 0
-        var child = element.readNextChild(reader)
-        while (child != null) {
-            if (match(child)) count++
-            count += countChildren(child, dataSource, reader, match)
-            child.skipData(dataSource)
-            child = element.readNextChild(reader)
-        }
-        return count
     }
 
     private class TrackingExecutor : AbstractExecutorService() {
@@ -196,6 +119,4 @@ class MediaJsonMkaRecorderOverflowTest : ShouldSpec() {
 
         override fun awaitTermination(timeout: Long, unit: TimeUnit): Boolean = delegate.awaitTermination(timeout, unit)
     }
-
-    private data class FfprobeResult(val exitCode: Int, val output: String, val duration: Double?)
 }

@@ -21,25 +21,20 @@ import io.kotest.assertions.fail
 import io.kotest.core.spec.style.ShouldSpec
 import io.kotest.matchers.ints.shouldBeGreaterThan
 import io.kotest.matchers.shouldBe
-import org.ebml.EBMLReader
-import org.ebml.Element
-import org.ebml.MasterElement
-import org.ebml.io.DataSource
-import org.ebml.io.FileDataSource
 import org.jitsi.mediajson.Event
 import org.jitsi.mediajson.Media
 import org.jitsi.mediajson.MediaEvent
 import org.jitsi.utils.logging2.createLogger
-import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.AbstractExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration.Companion.seconds
 
 class MediaJsonMkaRecorderRaceTest : ShouldSpec() {
     init {
-        should("drain an active event before closing the MKA writer") {
+        should("drain an active event before closing the MKA writer").config(timeout = 20.seconds) {
             val originalIoPool = TaskPools.ioPool
             val executor = SwitchableExecutor()
             TaskPools.ioPool = executor
@@ -79,10 +74,10 @@ class MediaJsonMkaRecorderRaceTest : ShouldSpec() {
                 executor.shutdown()
                 executor.awaitTermination(5, TimeUnit.SECONDS) shouldBe true
 
-                val baselineProbe = ffprobe(baseline)
-                val recordingProbe = ffprobe(recording)
-                if (baselineProbe != null && recordingProbe != null) {
-                    recordingProbe.duration shouldBe baselineProbe.duration
+                val baselineDuration = playableDurationWithFfprobe(baseline)
+                val recordingDuration = playableDurationWithFfprobe(recording)
+                if (baselineDuration != null && recordingDuration != null) {
+                    recordingDuration shouldBe baselineDuration
                 }
 
                 stopFailure shouldBe null
@@ -112,67 +107,6 @@ class MediaJsonMkaRecorderRaceTest : ShouldSpec() {
         }
     }
 
-    /**
-     * Run ffprobe when it is available. The EBML assertions below remain the portable CI fallback.
-     */
-    private fun ffprobe(recording: Path): FfprobeResult? = try {
-        val process = ProcessBuilder(
-            "ffprobe",
-            "-v",
-            "error",
-            "-show_entries",
-            "format=duration",
-            "-of",
-            "default=nw=1:nk=1",
-            recording.toString()
-        ).redirectErrorStream(true).start()
-        val output = process.inputStream.bufferedReader().readText().trim()
-        val exitCode = process.waitFor()
-        val result = FfprobeResult(
-            exitCode,
-            output,
-            output.lineSequence().mapNotNull(String::toDoubleOrNull).singleOrNull()
-        )
-        println("ffprobe ${recording.fileName}: exit=${result.exitCode}, output=${result.output.replace('\n', '|')}")
-        result
-    } catch (_: IOException) {
-        println("ffprobe is not installed; using the built-in EBML validation only")
-        null
-    }
-
-    private fun countMkaElements(path: Path, match: (Element) -> Boolean): Int {
-        val dataSource = FileDataSource(path.toString())
-        val reader = EBMLReader(dataSource)
-        var element = reader.readNextElement()
-        var count = 0
-        while (element != null) {
-            if (match(element)) count++
-            count += countChildren(element, dataSource, reader, match)
-            element.skipData(dataSource)
-            element = reader.readNextElement()
-        }
-        return count
-    }
-
-    private fun countChildren(
-        element: Element,
-        dataSource: DataSource,
-        reader: EBMLReader,
-        match: (Element) -> Boolean
-    ): Int {
-        if (element !is MasterElement) return 0
-
-        var count = 0
-        var child = element.readNextChild(reader)
-        while (child != null) {
-            if (match(child)) count++
-            count += countChildren(child, dataSource, reader, match)
-            child.skipData(dataSource)
-            child = element.readNextChild(reader)
-        }
-        return count
-    }
-
     private class SwitchableExecutor : AbstractExecutorService() {
         private val delegate = Executors.newSingleThreadExecutor()
 
@@ -193,6 +127,4 @@ class MediaJsonMkaRecorderRaceTest : ShouldSpec() {
 
         override fun awaitTermination(timeout: Long, unit: TimeUnit): Boolean = delegate.awaitTermination(timeout, unit)
     }
-
-    private data class FfprobeResult(val exitCode: Int, val output: String, val duration: Double?)
 }
