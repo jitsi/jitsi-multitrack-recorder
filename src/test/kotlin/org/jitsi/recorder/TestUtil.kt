@@ -60,13 +60,16 @@ internal fun setupInPlaceIoPool() {
     }
 }
 
-fun withConfig(config: String, block: () -> Unit) {
+suspend fun withConfig(config: String, block: suspend () -> Unit) {
     val originalConfigSource = Config.configSource.innerSource
 
     Config.configSource.innerSource = TypesafeConfigSource(
         "custom config",
         ConfigFactory.parseString(config).run { withFallback(ConfigFactory.load()) }
     )
-    block()
-    Config.configSource.innerSource = originalConfigSource
+    try {
+        block()
+    } finally {
+        Config.configSource.innerSource = originalConfigSource
+    }
 }

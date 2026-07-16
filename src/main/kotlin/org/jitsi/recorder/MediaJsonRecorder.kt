@@ -23,8 +23,8 @@ import org.jitsi.mediajson.Event
  * An abstract class that represents a recorder that records MediaJson events.
  */
 sealed class MediaJsonRecorder {
-    abstract fun addEvent(event: Event)
-    abstract fun stop()
+    abstract suspend fun addEvent(event: Event)
+    abstract suspend fun stop()
 }
 
 enum class RecordingFormat {

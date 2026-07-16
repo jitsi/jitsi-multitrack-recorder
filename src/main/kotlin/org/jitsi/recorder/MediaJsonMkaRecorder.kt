@@ -17,6 +17,12 @@
  */
 package org.jitsi.recorder
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.jitsi.mediajson.Event
 import org.jitsi.mediajson.MediaEvent
 import org.jitsi.mediajson.StartEvent
@@ -24,10 +30,7 @@ import org.jitsi.recorder.opus.GapTooLargeException
 import org.jitsi.recorder.opus.OpusPacket
 import org.jitsi.recorder.opus.PacketLossConcealmentInserter
 import org.jitsi.utils.logging2.Logger
-import org.jitsi.utils.queue.ErrorHandler
-import org.jitsi.utils.queue.PacketQueue
 import java.io.File
-import java.time.Clock
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import org.jitsi.recorder.RecorderMetrics.Companion.instance as metrics
@@ -40,21 +43,21 @@ class MediaJsonMkaRecorder(directory: File, parentLogger: Logger) : MediaJsonRec
 
     private val mkaRecorder = MkaRecorder(directory, logger)
     private var lastSequenceNumber = -1
-
-    val queue = EventQueue {
-        handleEvent(it)
-        true
-    }.also {
-        it.setErrorHandler(object : ErrorHandler {
-            override fun packetDropped() {
-                logger.warn("Dropped an event.")
-                RecorderMetrics.instance.queueEventsDropped.inc()
-            }
-            override fun packetHandlingFailed(t: Throwable) {
+    private val eventChannel = Channel<Event>(capacity = 100)
+    private val dispatcher = TaskPools.ioPool.asCoroutineDispatcher()
+    private val consumer = CoroutineScope(dispatcher).launch {
+        for (event in eventChannel) {
+            try {
+                handleEvent(event)
+            } catch (t: Throwable) {
                 logger.error("Error handling event: ", t)
                 RecorderMetrics.instance.queueExceptions.inc()
             }
-        })
+        }
+    }.also { job ->
+        job.invokeOnCompletion { cause ->
+            if (cause != null) eventChannel.close(cause)
+        }
     }
     private val trackRecorders = mutableMapOf<String, TrackRecorder>()
 
@@ -62,8 +65,8 @@ class MediaJsonMkaRecorder(directory: File, parentLogger: Logger) : MediaJsonRec
         logger.info("Starting a new recording.")
     }
 
-    override fun addEvent(event: Event) {
-        queue.add(event)
+    override suspend fun addEvent(event: Event) {
+        eventChannel.send(event)
     }
 
     private fun handleEvent(event: Event) {
@@ -114,9 +117,10 @@ class MediaJsonMkaRecorder(directory: File, parentLogger: Logger) : MediaJsonRec
         }
     }
 
-    override fun stop() {
+    override suspend fun stop() = withContext(NonCancellable + dispatcher) {
         logger.info("Stopping.")
-        queue.close()
+        eventChannel.close()
+        consumer.join()
         mkaRecorder.close()
     }
 }
@@ -166,17 +170,6 @@ private class TrackRecorder(
         }
     }
 }
-
-class EventQueue(packetHandler: (Event) -> Boolean) : PacketQueue<Event>(
-    100,
-    false,
-    "id",
-    packetHandler,
-    TaskPools.ioPool,
-    Clock.systemUTC(),
-    // interruptOnClose
-    true
-)
 
 /**
  * Throw an exception if the event is not in the expected sequence, also extract the sequence number for convenience

@@ -172,7 +172,7 @@ class MkaRecorderTest : ShouldSpec() {
         else -> fail("Unknown event type: ${this.javaClass.simpleName}")
     }
 
-    fun runOnce(sample: String, mkaFile: String, addEvent: (Event) -> Unit, close: () -> Unit) {
+    suspend fun runOnce(sample: String, mkaFile: String, addEvent: suspend (Event) -> Unit, close: suspend () -> Unit) {
         val input = javaClass.getResource(sample)?.readText()?.lines()?.dropLast(1) ?: fail("Can not read $sample")
         val inputJson: List<Event> = input.map { objectMapper.readValue(it, Event::class.java) }.also {
             logger.info("Parsed ${it.size} events")
@@ -180,21 +180,26 @@ class MkaRecorderTest : ShouldSpec() {
         runOnce(mkaFile, addEvent, close, inputJson)
     }
 
-    fun runOnce(mkaFile: String, addEvent: (Event) -> Unit, close: () -> Unit, inputJson: List<Event>) {
+    suspend fun runOnce(
+        mkaFile: String,
+        addEvent: suspend (Event) -> Unit,
+        close: suspend () -> Unit,
+        inputJson: List<Event>
+    ) {
         var mediaPackets = 0
         var lostPackets = 0
         logger.warn("Using ${loss * 100}% packet loss.")
 
-        inputJson.forEach {
-            if (it is MediaEvent) {
+        for (event in inputJson) {
+            if (event is MediaEvent) {
                 if (Random.nextDouble() > loss) {
-                    addEvent(it)
+                    addEvent(event)
                     mediaPackets++
                 } else {
                     lostPackets++
                 }
             } else {
-                addEvent(it)
+                addEvent(event)
             }
         }
         close()

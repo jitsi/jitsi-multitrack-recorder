@@ -66,7 +66,9 @@ class MediaJsonMkaRecorderRaceTest : ShouldSpec() {
                 val directory = Files.createTempDirectory("MediaJsonMkaRecorderRaceTest")
                 val recording = directory.resolve("recording.mka")
                 val recorder = MediaJsonMkaRecorder(directory.toFile(), createLogger())
-                input.forEach(recorder::addEvent)
+                for (event in input) {
+                    recorder.addEvent(event)
+                }
 
                 val sizeBeforeGap = Files.size(recording)
                 executor.runAsynchronously = true
@@ -92,10 +94,12 @@ class MediaJsonMkaRecorderRaceTest : ShouldSpec() {
         }
     }
 
-    private fun recordSynchronously(events: List<Event>): Path {
+    private suspend fun recordSynchronously(events: List<Event>): Path {
         val directory = Files.createTempDirectory("MediaJsonMkaRecorderBaseline")
         val recorder = MediaJsonMkaRecorder(directory.toFile(), createLogger())
-        events.forEach(recorder::addEvent)
+        for (event in events) {
+            recorder.addEvent(event)
+        }
         recorder.stop()
         return directory.resolve("recording.mka")
     }

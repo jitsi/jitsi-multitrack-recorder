@@ -17,6 +17,7 @@
  */
 package org.jitsi.recorder
 
+import kotlinx.coroutines.CancellationException
 import org.jitsi.mediajson.Event
 import org.jitsi.mediajson.PingEvent
 import org.jitsi.mediajson.PongEvent
@@ -41,7 +42,7 @@ class RecordingSession(private val meetingId: String) {
         MediaJsonJsonRecorder(directory)
     }
 
-    fun processText(text: String): String? {
+    suspend fun processText(text: String): String? {
         return try {
             when (val event = Event.parse(text)) {
                 is PingEvent -> PongEvent(event.id).toJson()
@@ -51,13 +52,15 @@ class RecordingSession(private val meetingId: String) {
                     null
                 }
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Throwable) {
             logger.error("Error", e)
             null
         }
     }
 
-    fun stop() {
+    suspend fun stop() {
         logger.info("Stopping")
         mediaJsonRecorder.stop()
         metrics.currentSessions.dec()
