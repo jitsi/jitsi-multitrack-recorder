@@ -43,7 +43,7 @@ class MediaJsonMkaRecorder(directory: File, parentLogger: Logger) : MediaJsonRec
 
     private val mkaRecorder = MkaRecorder(directory, logger)
     private var lastSequenceNumber = -1
-    private val eventChannel = Channel<Event>(capacity = 100)
+    private val eventChannel = Channel<Event>(capacity = Config.eventChannelCapacity)
     private val dispatcher = TaskPools.ioPool.asCoroutineDispatcher()
     private val consumer = CoroutineScope(dispatcher).launch {
         for (event in eventChannel) {
