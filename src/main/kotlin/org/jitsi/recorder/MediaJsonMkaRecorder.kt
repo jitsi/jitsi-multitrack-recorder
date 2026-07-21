@@ -56,7 +56,7 @@ class MediaJsonMkaRecorder(directory: File, parentLogger: Logger) : MediaJsonRec
         }
     }.also { job ->
         job.invokeOnCompletion { cause ->
-            if (cause != null) eventChannel.close(cause)
+            eventChannel.close(cause)
         }
     }
     private val trackRecorders = mutableMapOf<String, TrackRecorder>()
