@@ -35,10 +35,6 @@ import kotlin.time.Duration.Companion.seconds
 class MediaJsonMkaRecorderOverflowTest : ShouldSpec() {
     init {
         should("preserve every event during a high-load burst").config(timeout = 20.seconds) {
-            val trackCount = 20
-            val packetsPerTrack = 500
-            val expectedBlocks = trackCount * packetsPerTrack
-
             val originalIoPool = TaskPools.ioPool
             val executor = TrackingExecutor()
             TaskPools.ioPool = executor
@@ -49,7 +45,7 @@ class MediaJsonMkaRecorderOverflowTest : ShouldSpec() {
                 val sourceStart = input.first() as StartEvent
                 val sourceMedia = (input.last() as MediaEvent).media
                 var sequenceNumber = 1
-                val trackTags = (0 until trackCount).map { "${sourceStart.start.tag}-$it" }
+                val trackTags = (0 until TRACK_COUNT).map { "${sourceStart.start.tag}-$it" }
                 val starts = trackTags.map { tag ->
                     StartEvent(
                         sequenceNumber++,
@@ -57,7 +53,7 @@ class MediaJsonMkaRecorderOverflowTest : ShouldSpec() {
                     )
                 }
                 val mediaEvents = buildList {
-                    repeat(packetsPerTrack) { packet ->
+                    repeat(PACKETS_PER_TRACK) { packet ->
                         trackTags.forEach { tag ->
                             add(
                                 MediaEvent(
@@ -93,7 +89,7 @@ class MediaJsonMkaRecorderOverflowTest : ShouldSpec() {
 
                 stopFailure shouldBe null
                 dropped shouldBe 0
-                recordedBlocks shouldBe expectedBlocks
+                recordedBlocks shouldBe EXPECTED_BLOCKS
             } finally {
                 executor.shutdownNow()
                 TaskPools.ioPool = originalIoPool
@@ -119,5 +115,11 @@ class MediaJsonMkaRecorderOverflowTest : ShouldSpec() {
         override fun isTerminated(): Boolean = delegate.isTerminated
 
         override fun awaitTermination(timeout: Long, unit: TimeUnit): Boolean = delegate.awaitTermination(timeout, unit)
+    }
+
+    private companion object {
+        const val TRACK_COUNT = 20
+        const val PACKETS_PER_TRACK = 500
+        const val EXPECTED_BLOCKS = TRACK_COUNT * PACKETS_PER_TRACK
     }
 }
