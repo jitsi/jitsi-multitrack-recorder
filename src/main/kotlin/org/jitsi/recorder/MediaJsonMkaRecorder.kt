@@ -49,8 +49,8 @@ class MediaJsonMkaRecorder(directory: File, parentLogger: Logger) : MediaJsonRec
         for (event in eventChannel) {
             try {
                 handleEvent(event)
-            } catch (t: Throwable) {
-                logger.error("Error handling event: ", t)
+            } catch (e: Exception) {
+                logger.error("Error handling event: ", e)
                 RecorderMetrics.instance.queueExceptions.inc()
             }
         }

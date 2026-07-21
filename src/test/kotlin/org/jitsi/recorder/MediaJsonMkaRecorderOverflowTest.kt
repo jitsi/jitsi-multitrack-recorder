@@ -35,10 +35,10 @@ import kotlin.time.Duration.Companion.seconds
 class MediaJsonMkaRecorderOverflowTest : ShouldSpec() {
     init {
         should("preserve every event during a high-load burst").config(timeout = 20.seconds) {
-            const val TRACK_COUNT = 20
-            const val PACKETS_PER_TRACK = 500
-            const val EXPECTED_BLOCKS = trackCount * packetsPerTrack
-      
+            val trackCount = 20
+            val packetsPerTrack = 500
+            val expectedBlocks = trackCount * packetsPerTrack
+
             val originalIoPool = TaskPools.ioPool
             val executor = TrackingExecutor()
             TaskPools.ioPool = executor

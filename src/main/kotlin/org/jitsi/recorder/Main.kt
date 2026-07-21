@@ -45,6 +45,7 @@ import kotlin.time.Duration.Companion.seconds
 import org.jitsi.recorder.RecorderMetrics.Companion.instance as metrics
 
 private val logger = LoggerImpl("org.jitsi.recorder.Main")
+private val MEETING_ID_REGEX = Regex("[a-zA-Z0-9_-]+")
 
 fun Application.module() {
     install(WebSockets) {
@@ -64,7 +65,7 @@ fun Application.module() {
         webSocket("/record/{meetingid}") {
             try {
                 val meetingId = call.parameters["meetingid"] ?: return@webSocket
-                if (!meetingId.matches(Regex("[a-zA-Z0-9_-]+"))) {
+                if (!meetingId.matches(MEETING_ID_REGEX)) {
                     close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Invalid meetingId"))
                     return@webSocket
                 }

@@ -54,7 +54,7 @@ class RecordingSession(private val meetingId: String) {
             }
         } catch (e: CancellationException) {
             throw e
-        } catch (e: Throwable) {
+        } catch (e: Exception) {
             logger.error("Error", e)
             null
         }
