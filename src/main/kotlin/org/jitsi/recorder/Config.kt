@@ -50,6 +50,10 @@ class Config {
             }
         }
 
+        val eventChannelCapacity: Int by config {
+            "$BASE.recording.event-channel-capacity".from(configSource)
+        }
+
         val finalizeScript: String? by optionalconfig {
             "$BASE.finalize-script".from(configSource)
         }
@@ -63,6 +67,7 @@ class Config {
             recordingDirectory: $recordingDirectory
             recordingFormat: $recordingFormat
             maxGapDuration: $maxGapDuration
+            eventChannelCapacity: $eventChannelCapacity
             finalizeScript: $finalizeScript
         """.trimIndent()
     }

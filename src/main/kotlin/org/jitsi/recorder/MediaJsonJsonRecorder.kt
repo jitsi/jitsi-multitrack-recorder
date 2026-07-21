@@ -29,13 +29,13 @@ class MediaJsonJsonRecorder(directory: File) : MediaJsonRecorder() {
     private val file: File = File(directory, "recording.json")
     private val writer: BufferedWriter = BufferedWriter(FileWriter(file, true))
 
-    override fun addEvent(event: Event) {
+    override suspend fun addEvent(event: Event) {
         writer.write(event.toJson())
         writer.newLine()
         writer.flush()
     }
 
-    override fun stop() {
+    override suspend fun stop() {
         writer.close()
     }
 }

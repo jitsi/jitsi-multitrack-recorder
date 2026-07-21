@@ -34,6 +34,10 @@ import io.ktor.websocket.CloseReason
 import io.ktor.websocket.Frame
 import io.ktor.websocket.close
 import io.ktor.websocket.readText
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.withContext
 import org.jitsi.metaconfig.MetaconfigLogger
 import org.jitsi.metaconfig.MetaconfigSettings
 import org.jitsi.utils.logging2.LoggerImpl
@@ -41,6 +45,7 @@ import kotlin.time.Duration.Companion.seconds
 import org.jitsi.recorder.RecorderMetrics.Companion.instance as metrics
 
 private val logger = LoggerImpl("org.jitsi.recorder.Main")
+private val MEETING_ID_REGEX = Regex("[a-zA-Z0-9_-]+")
 
 fun Application.module() {
     install(WebSockets) {
@@ -60,29 +65,32 @@ fun Application.module() {
         webSocket("/record/{meetingid}") {
             try {
                 val meetingId = call.parameters["meetingid"] ?: return@webSocket
-                if (!meetingId.matches(Regex("[a-zA-Z0-9_-]+"))) {
+                if (!meetingId.matches(MEETING_ID_REGEX)) {
                     close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Invalid meetingId"))
                     return@webSocket
                 }
                 logger.info("New recording session for meetingId $meetingId")
                 val session = RecordingSession(meetingId)
-                for (frame in incoming) {
-                    when (frame) {
-                        is Frame.Text -> {
-                            session.processText(frame.readText())?.let { send(Frame.Text(it)) }
-                        }
+                try {
+                    for (frame in incoming) {
+                        when (frame) {
+                            is Frame.Text -> {
+                                session.processText(frame.readText())?.let { send(Frame.Text(it)) }
+                            }
 
-                        is Frame.Close -> {
-                            session.stop()
-                        }
+                            is Frame.Close -> Unit
 
-                        else -> logger.info("Received frame: ${frame::class.simpleName}")
+                            else -> logger.info("Received frame: ${frame::class.simpleName}")
+                        }
+                    }
+                    logger.info("Completed")
+                } finally {
+                    withContext(NonCancellable + TaskPools.ioPool.asCoroutineDispatcher()) {
+                        session.stop()
                     }
                 }
-                logger.info("Completed")
-                TaskPools.ioPool.execute {
-                    session.stop()
-                }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 logger.error("Error in recording session: ${e.message}")
                 RecorderMetrics.instance.uncaughtExceptions.inc()
